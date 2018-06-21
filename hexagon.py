@@ -6,6 +6,11 @@ def safeMax(list, default=0):
 def safeMin(list, default=0):
   return default if len(list) == 0 else min(list)
 
+class Klass:
+
+  def __init__(self, j):
+    self.__dict__ = j
+
 class Transaction:
 
   def __init__(self, fromCell, toCell, resources):
@@ -42,10 +47,9 @@ class MyCell:
     self.id = id
     self.neighbours = neighbours
 
-
 class TurnStat:
 
-  def __init__(self, strategy=None, cellCount=None, resources=None, negative=None, resourceLossStreak=None):
+  def __init__(self, strategy=None, cellCount=0, resources=0, negative=0, resourceLossStreak=0):
     self.resources = resources
     self.cellCount = cellCount
     self.strategy = strategy
@@ -69,10 +73,10 @@ class UberCell:
     self.enemies = filter(lambda x: x.isOwned == False, self.neighbours)
     self.owns = filter(lambda x: x.isOwned == True, self.neighbours)
     self.noneOwns = filter(lambda x: x.isOwned is None or x.isOwned == False, self.neighbours)
-    self.boostFactor = 1.0 * math.log(sum(n.resources for n in self.neighbours), 3) * \
-                        sum(n.resources for n in self.enemies) * \
+    self.boostFactor = 1.0 * math.log(sum((n.resources for n in self.neighbours), 1), 3) * \
+                        sum((n.resources for n in self.enemies), 0) * \
                         safeMax([n.resources for n in self.enemies]) * \
-                        math.log(sum(n.resources for n in self.enemies), 5) / (self.resources + 1)
+                        math.log(sum((n.resources for n in self.enemies), 1), 5) / (self.resources + 1)
     self.powerFactor = self.resources / (safeMin([n.resources for n in self.noneOwns]) + 1)
     self.expansionPotential = len(self.nones) * 100
     self.attackPotential = self.resources * \
@@ -110,9 +114,18 @@ class World:
     return dic
 
   def __init__(self, cells):
-    self.cells = {x.id: x for x in cells}
-    self.uberCells = {x.id: UberCell(x, self) for x in cells}
-    self.resources = sum(c.resources for c in self.cells)
+
+    ccells = []
+    for x in cells:
+      nn = []
+      for n in x['neighbours']:
+        nn.append(NeighbourCell(n['id'], n['owned'], n['resourceCount']))
+      c = MyCell(x['id'], nn, x['resourceCount'])
+      ccells.append(c)
+
+    self.cells = {x.id: x for x in ccells}
+    self.uberCells = {x.id: UberCell(x, self) for x in ccells}
+    self.resources = sum(self.cells[x].resources for x in self.cells)
     self.cellCount = len(cells)
     self.enemyCounts = self.getOfType(False)
     self.noneCounts = self.getOfType(None)
@@ -138,9 +151,9 @@ class Aliostad:
 
     srt = sorted(world.uberCells, key=lambda x: world.uberCells[x].expansionPotential, reverse=True)
     fromCell = srt[0]
-    srt2 = sorted(fromCell.nones, key=lambda x: world.neighbourhoodCounts[x.id], reverse=True)
+    srt2 = sorted(world.uberCells[fromCell].nones, key=lambda x: world.neighbourhoodCounts[x.id], reverse=True)
     toCell = srt2[0]
-    return Transaction(fromCell, toCell, int(fromCell.resources * 51 / 100))
+    return Transaction(fromCell, toCell.id, int(world.uberCells[fromCell].resources * 51 / 100))
 
   def getBoost(self, world):
     '''

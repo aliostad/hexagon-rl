@@ -31,7 +31,17 @@ def move(playerId, gameId):
     key = playerId + "_" + gameId
     if key not in players:
       return "player not found in this game", 404
-
-    return '', 200
+    j = request.get_json()
+    s = hexagon.Klass(j)
+    mv = players[key].turn(s.ownedCells)
+    return jsonify(mv.__dict__)
   except Exception as e:
     return e.message
+
+@app.route("/api/player/<playerId>/game/<gameId>", methods=['DELETE'])
+def endGame(playerId, gameId):
+  key = playerId + "_" + gameId
+  if key not in players:
+    return "player not found in this game", 404
+  del players[key]
+  return "player not found in this game", 404
