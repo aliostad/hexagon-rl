@@ -40,3 +40,4 @@ nosetests.xml
 *.log
 .idea
 *.h5*
+.idea/
