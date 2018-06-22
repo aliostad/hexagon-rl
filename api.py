@@ -27,16 +27,18 @@ def startGame(playerId, gameId):
 
 @app.route("/api/player/<playerId>/game/<gameId>", methods=['PUT'])
 def move(playerId, gameId):
-  try:
-    key = playerId + "_" + gameId
-    if key not in players:
-      return "player not found in this game", 404
-    j = request.get_json()
-    s = hexagon.Klass(j)
-    mv = players[key].turn(s.ownedCells)
-    return jsonify(mv.__dict__)
-  except Exception as e:
-    return e.message
+  #try:
+  key = playerId + "_" + gameId
+  if key not in players:
+    return "player not found in this game", 404
+  j = request.get_json()
+  s = hexagon.Klass(j)
+  mv = players[key].turn(s.ownedCells)
+  if mv is None:
+    print('idiot')
+  return jsonify(mv.__dict__)
+  #except Exception as e:
+    #return e.message
 
 @app.route("/api/player/<playerId>/game/<gameId>", methods=['DELETE'])
 def endGame(playerId, gameId):
