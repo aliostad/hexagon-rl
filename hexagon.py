@@ -90,7 +90,7 @@ class UberCell:
     self.depth = (len(self.owns) * 100) + sum(len(self.world.uberCells[n.id].owns) for n in self.owns)
 
   def getGivingBoostSuitability(self):
-    return self.depth * math.log(self.resources) * (1.7 if self.resources == 100 else 1)
+    return self.depth * math.log(self.resources + 1) * (1.7 if self.resources == 100 else 1)
 
 class World:
 
