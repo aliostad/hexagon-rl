@@ -1,4 +1,8 @@
 import math
+from random import Random
+
+r = Random()
+
 
 def safeMax(list, default=0):
   return default if len(list) == 0 else max(list)
@@ -81,7 +85,7 @@ class UberCell:
     self.expansionPotential = len(self.nones) * 100
     self.attackPotential = self.resources * \
                            math.log(max(self.resources - safeMin([n.resources for n in self.noneOwns]), 1), 5) / \
-                                  (sum([n.resources for n in self.enemies], 1) + 1)
+                                  math.log(sum([n.resources for n in self.enemies], 1) + 1, 5)
     self.canAttack = any(self.enemies)
     self.canAcceptTransfer = len(self.owns) > 0
     self.depth = 0
@@ -173,6 +177,7 @@ class Aliostad:
                  -1000 if not world.uberCells[x].canAcceptTransfer else world.uberCells[x].boostFactor, reverse=True)
     cellToId = srt2[0]
     amount = int(cellFrom.resources * 70 / 100)
+    #print "{}: Boost from {} to {}".format(self.name, cellFrom.id, cellToId)
     return Transaction(cellFrom.id, cellToId, amount)
 
   def getAttack(self, world):
@@ -183,14 +188,16 @@ class Aliostad:
     :return: tran: Transaction
     '''
 
+
     srt = sorted(world.uberCells, key=lambda x:
-    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential
+    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 5.0)
                  , reverse=True)
     cellFromId = srt[0]
     cellFrom = world.uberCells[cellFromId]
-    srt2 = sorted(cellFrom.enemies, key=lambda x: x.resources)
+    srt2 = sorted(cellFrom.enemies, key=lambda x: x.resources * r.uniform(0.1, 05))
     cellTo = srt2[0]
     amount = cellTo.resources + ((cellFrom.resources - cellTo.resources) * 70 / 100)
+    #print "{}: Attack from {} to {}".format(self.name, cellFrom.id, cellTo.id)
     return Transaction(cellFrom.id, cellTo.id, amount)
 
   def timeForBoost(self, world):
@@ -201,10 +208,13 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
     :return: res: Boolean
     '''
 
-    goBack = int(math.log((self.turnNumber+1) * 10, 5.8))
+    goBack = int(math.sqrt((self.turnNumber+1) * 10))
+    count = 0
     for i in range(0, goBack):
       if self.history[-i].strategy == Strategy.Attack:
-        return True
+        count +=1
+        if count > 2:
+          return True
     return False
 
 
@@ -223,6 +233,8 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
     stat = TurnStat(cellCount=world.cellCount, resources=world.resources,
                                  resourceLossStreak=self.history[-1].resourceLossStreak)
 
+    #print "{} ({}) => {}".format(self.name, self.turnNumber, self.history[-1].strategy)
+
     if self.history[-1].resources > stat.resources:
       stat.resourceLossStreak += 1
     else:
@@ -230,7 +242,7 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
 
     self.history.append(stat)
 
-    if world.noneCounts * 8 > world.enemyCounts:
+    if world.noneCounts > 0 and (world.noneCounts * 8 > world.enemyCounts or r.uniform(0, 1) > 0.9):
       stat.strategy = Strategy.Expand
       t = self.getEarlyExpansion(world)
       stat.strategy = Strategy.Expand
