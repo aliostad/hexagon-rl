@@ -80,7 +80,7 @@ class UberCell:
     self.boostFactor = 1.0 * math.log(sum((n.resources for n in self.neighbours), 1), 3) * \
                         sum((n.resources for n in self.enemies), 0) * \
                         safeMax([n.resources for n in self.enemies]) * \
-                        math.log(sum((n.resources for n in self.enemies), 1), 5) / (self.resources + 1)
+                        math.log(max(sum((n.resources for n in self.enemies), 1), 1), 5) / (self.resources + 1)
     self.powerFactor = self.resources / (safeMin([n.resources for n in self.noneOwns]) + 1)
     self.expansionPotential = len(self.nones) * 100
     self.attackPotential = self.resources * \
@@ -147,7 +147,7 @@ class Aliostad:
     self.name = name
     self.turnNumber = 0
     self.history = []
-
+    self.f = open(name + ".log", mode='w')
 
   def getEarlyExpansion(self, world):
     '''
@@ -217,8 +217,7 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
           return True
     return False
 
-
-  def turn(self, cells):
+  def turnx(self, cells):
     '''
 
     :param cells: asdas : []
@@ -279,3 +278,10 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
     else:
       stat.strategy = Strategy.Attack
       return self.getAttack(world)
+
+  def turn(self, cells):
+    move = self.turnx(cells)
+    h = self.history[0]
+    self.f.write("{} - {}: From {} to {} with {} \n".format(self.turnNumber,
+              h.strategy, move.fromCell, move.toCell, move.resources))
+    return move
