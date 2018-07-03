@@ -9,18 +9,24 @@ import codecs
 import random
 import sys
 import hexagon
-
+import centaur
 t = time.time()
 app = Flask(__name__)
 application = app
 
+centaurName = 'cc'
+
 players = {}
+players[centaurName + '_1'] = centaur.Centaur(centaurName, 'ccc-')
 
 @app.route("/api/player/<playerId>/game/<gameId>", methods=['POST'])
 def startGame(playerId, gameId):
   try:
     key = playerId + "_" + gameId
-    players[key] = hexagon.Aliostad(playerId)
+    if playerId == centaurName:
+      players[key].reset()
+    else:
+      players[key] = hexagon.Aliostad(playerId)
     return '', 200
   except Exception as e:
     return e.message

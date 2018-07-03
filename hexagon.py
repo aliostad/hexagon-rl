@@ -15,12 +15,24 @@ class Klass:
   def __init__(self, j):
     self.__dict__ = j
 
+
+def translateOwnership(owned):
+  if owned is None:
+    return 'N'
+  if owned:
+    return 'O'
+  else:
+    return 'E'
+
 class Transaction:
 
   def __init__(self, fromCell, toCell, resources):
     self.toCell = toCell
     self.fromCell = fromCell
     self.resources = resources
+
+  def __str__(self):
+    return '{}=>{} ({})'.format(self.fromCell, self.toCell, self.resources)
 
 class NeighbourCell:
 
@@ -29,13 +41,17 @@ class NeighbourCell:
     self.id = id
     self.resources = resources
 
+  def __str__(self):
+    return '{}: {}({})'.format(self.id, translateOwnership(self.isOwned), self.resources)
+
 
 class Strategy:
-  Non = 0
-  Defend = 1
-  Attack = 2
-  Boost = 3
-  Expand = 4
+  Non = "None"
+  Defend = "Defend"
+  Attack = "Attack"
+  Boost = "Boost"
+  Expand = "Expand"
+  Island = "Island"
 
 
 class MyCell:
@@ -50,6 +66,9 @@ class MyCell:
     self.resources = resources
     self.id = id
     self.neighbours = neighbours
+
+  def __str__(self):
+    return '{} ({}): {}'.format(self.id, self.resources, '#'.join(map(lambda x: str(x), self.neighbours)))
 
 class TurnStat:
 
@@ -77,16 +96,18 @@ class UberCell:
     self.enemies = filter(lambda x: x.isOwned == False, self.neighbours)
     self.owns = filter(lambda x: x.isOwned == True, self.neighbours)
     self.noneOwns = filter(lambda x: x.isOwned is None or x.isOwned == False, self.neighbours)
-    self.boostFactor = 1.0 * math.log(sum((n.resources for n in self.neighbours), 1), 3) * \
-                        sum((n.resources for n in self.enemies), 0) * \
-                        safeMax([n.resources for n in self.enemies]) * \
-                        math.log(max(sum((n.resources for n in self.enemies), 1), 1), 5) / (self.resources + 1)
+
+    # how suitable is a cell for receiving boost
+    #
+    self.boostFactor = math.sqrt(sum((n.resources for n in self.enemies), 1)) * r.uniform(1.0, 2.0) * \
+                        safeMax([n.resources for n in self.enemies], 1) / (self.resources + 1)
     self.powerFactor = self.resources / (safeMin([n.resources for n in self.noneOwns]) + 1)
     self.expansionPotential = len(self.nones) * 100
     self.attackPotential = self.resources * \
-                           math.log(max(self.resources - safeMin([n.resources for n in self.noneOwns]), 1), 5) / \
+                           math.sqrt(max(self.resources - safeMin([n.resources for n in self.noneOwns]), 1)) / \
                                   math.log(sum([n.resources for n in self.enemies], 1) + 1, 5)
-    self.canAttack = any(self.enemies)
+    self.hasEnemyNeighbours = any(self.enemies)
+    self.canAttack = any(filter(lambda x: x.resources < self.resources+2,  self.enemies))
     self.canAcceptTransfer = len(self.owns) > 0
     self.depth = 0
 
@@ -94,7 +115,7 @@ class UberCell:
     self.depth = (len(self.owns) * 100) + sum(len(self.world.uberCells[n.id].owns) for n in self.owns)
 
   def getGivingBoostSuitability(self):
-    return self.depth * math.log(self.resources + 1) * (1.7 if self.resources == 100 else 1)
+    return (self.depth + 1) * math.sqrt(self.resources + 1) * (1.7 if self.resources == 100 else 1) * r.uniform(1.0, 2.0)
 
 class World:
 
@@ -114,12 +135,28 @@ class World:
     dic = {}
     for cid in self.cells:
       for n in self.cells[cid].neighbours:
-        if n.isOwned is None or n.isOwned == False:
+        if n.isOwned is None or n.isOwned is False:
+          if n.id in dic:
+            dic[cid] += 1
+          else:
+            dic[cid] = 1
+    return dic
+
+  def buildNonOwnsNeighbourhood(self):
+    '''
+    build dictionary of how many owned cells around non-owned cells so can be attacked easier
+    :return:
+    '''
+    dic = {}
+    for cid in self.cells:
+      for n in self.cells[cid].neighbours:
+        if n.isOwned is None or n.isOwned is False:
           if n.id in dic:
             dic[n.id] += 1
           else:
             dic[n.id] = 1
     return dic
+
 
   def __init__(self, cells):
 
@@ -138,6 +175,8 @@ class World:
     self.enemyCounts = self.getOfType(False)
     self.noneCounts = self.getOfType(None)
     self.neighbourhoodCounts = self.buildNeighbourhood()
+    self.neighbourhoodNonOwnCounts = self.buildNonOwnsNeighbourhood()
+
     for cid in self.uberCells:
       self.uberCells[cid].calculateDepth2()
 
@@ -159,7 +198,7 @@ class Aliostad:
 
     srt = sorted(world.uberCells, key=lambda x: world.uberCells[x].expansionPotential, reverse=True)
     fromCell = srt[0]
-    srt2 = sorted(world.uberCells[fromCell].nones, key=lambda x: world.neighbourhoodCounts[x.id], reverse=True)
+    srt2 = sorted(world.uberCells[fromCell].nones, key=lambda x: world.neighbourhoodNonOwnCounts[x.id], reverse=True)
     toCell = srt2[0]
     return Transaction(fromCell, toCell.id, int(world.uberCells[fromCell].resources * 51 / 100))
 
@@ -174,11 +213,14 @@ class Aliostad:
     cellFromId = srt[0]
     cellFrom = world.uberCells[cellFromId]
     srt2= sorted(world.uberCells, key=lambda x:
-                 -1000 if not world.uberCells[x].canAcceptTransfer else world.uberCells[x].boostFactor, reverse=True)
+                 -1000 if not world.uberCells[x].canAcceptTransfer or
+                 x == cellFromId else world.uberCells[x].boostFactor, reverse=True)
+
     cellToId = srt2[0]
     amount = int(cellFrom.resources * 70 / 100)
-    #print "{}: Boost from {} to {}".format(self.name, cellFrom.id, cellToId)
     return Transaction(cellFrom.id, cellToId, amount)
+    #print "{}: Boost from {} to {} - {} => {}".format(self.name, cellFrom.id,
+    #        cellToId, cellFrom.getGivingBoostSuitability(), world.uberCells[cellToId].boostFactor)
 
   def getAttack(self, world):
     '''
@@ -187,10 +229,8 @@ class Aliostad:
     :param world: the world: World
     :return: tran: Transaction
     '''
-
-
     srt = sorted(world.uberCells, key=lambda x:
-    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 5.0)
+    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
                  , reverse=True)
     cellFromId = srt[0]
     cellFrom = world.uberCells[cellFromId]
@@ -207,13 +247,12 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
     :param world: a world: World
     :return: res: Boolean
     '''
-
-    goBack = int(math.sqrt((self.turnNumber+1) * 10))
+    goBack = int(math.sqrt(len(world.cells)))
     count = 0
     for i in range(0, goBack):
       if self.history[-i].strategy == Strategy.Attack:
-        count +=1
-        if count > 2:
+        count += 1
+        if count > 4:
           return True
     return False
 
@@ -239,15 +278,13 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
     else:
       stat.resourceLossStreak = int(math.sqrt(stat.resourceLossStreak))
 
-    self.history.append(stat)
-
     if world.noneCounts > 0 and (world.noneCounts * 8 > world.enemyCounts or r.uniform(0, 1) > 0.9):
       stat.strategy = Strategy.Expand
       t = self.getEarlyExpansion(world)
       stat.strategy = Strategy.Expand
-      return t
+      return t, stat, world
 
-    islands = filter(lambda x: world.neighbourhoodCounts[x] == 6, world.neighbourhoodCounts)
+    islands = filter(lambda x: world.neighbourhoodCounts[x] > 5, world.neighbourhoodCounts)
     if len(islands) > 0:
       # build a bridge
       islandId = islands[0]
@@ -264,24 +301,28 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
 
       if any(srt):
         cand = srt[0]
-        stat.strategy = Strategy.Attack
-        return Transaction(cand[0], cand[1], cand[3])
+        stat.strategy = Strategy.Island
+        return Transaction(cand[0], cand[1], cand[3]), stat, world
 
     canAcceptCount = len(filter(lambda x: world.uberCells[x].canAcceptTransfer, world.uberCells))
     if canAcceptCount == 0:
       stat.strategy = Strategy.Attack
-      return self.getAttack(world)
+      return self.getAttack(world), stat, world
+    elif not any(filter(lambda x: x.canAttack, world.uberCells.values())):
+      stat.strategy = Strategy.Boost
+      return self.getBoost(world), stat, world
     elif stat.resourceLossStreak > 3 or len(filter(lambda x: world.uberCells[x].canAttack,
                           world.uberCells)) == 0 or self.timeForBoost(world):
       stat.strategy = Strategy.Boost
-      return self.getBoost(world)
+      return self.getBoost(world), stat, world
     else:
       stat.strategy = Strategy.Attack
-      return self.getAttack(world)
+      return self.getAttack(world), stat, world
 
   def turn(self, cells):
-    move = self.turnx(cells)
-    h = self.history[0]
-    self.f.write("{} - {}: From {} to {} with {} \n".format(self.turnNumber,
-              h.strategy, move.fromCell, move.toCell, move.resources))
+
+    move, h, world = self.turnx(cells)
+    self.history.append(h)
+    self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.turnNumber,
+              h.strategy, move.fromCell, move.toCell, move.resources, world.cells[move.fromCell]))
     return move
