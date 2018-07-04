@@ -1,18 +1,16 @@
-from hexagon import *
+from hexagon_agent import *
 
 import numpy as np
 import random
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation
-from keras.optimizers import Adam
+from keras.layers import Dense, Activation
 from collections import deque
 from keras import backend as K
+
 K.clear_session()
 
-mainGraph = None
-targetGraph = None
-
 import tensorflow as tf
+graph = None
 
 class Round:
   def __init__(self, world, inputVector, action):
@@ -42,12 +40,8 @@ class Centaur(Aliostad):
 
     self.model = self.create_model()
     self.model._make_predict_function()
-    global mainGraph
-    global targetGraph
-    mainGraph = tf.get_default_graph()
-    self.target_model = self.create_model()
-    self.target_model._make_predict_function()
-    targetGraph = tf.get_default_graph()
+    global graph
+    graph = tf.get_default_graph()
 
   def getRandomAction(self):
     if self.r.uniform(0.0, 0.1) < 0.5:
@@ -71,13 +65,13 @@ class Centaur(Aliostad):
     return model
 
   def act(self, inpt):
-    global mainGraph
-    global targetGraph
     self.epsilon *= self.epsilon_decay
     self.epsilon = max(self.epsilon_min, self.epsilon)
     if np.random.random() < self.epsilon:
       return self.getRandomAction()
-    with mainGraph.as_default():
+
+    global graph
+    with graph.as_default():
       action = self.model.predict(inpt)[0]
     return action
 
@@ -85,35 +79,18 @@ class Centaur(Aliostad):
     self.memory.append([state, action, reward, new_state])
 
   def replay(self):
-    global mainGraph
-    global targetGraph
+    global graph
     batch_size = 32
     if len(self.memory) < batch_size:
       return
     samples = random.sample(self.memory, batch_size)
     for sample in samples:
       state, action, reward, new_state = sample
-      with targetGraph.as_default():
-        target = self.target_model.predict(state)
-        Q_future = max(self.target_model.predict(new_state)[0])
+      with graph.as_default():
+        target = self.model.predict(state)
+        Q_future = max(self.model.predict(new_state)[0])
         target[0][action] = reward + Q_future * self.gamma
-      with mainGraph.as_default():
         self.model.fit(state, target, epochs=1, verbose=0)
-
-  def target_train(self):
-    global mainGraph
-    global targetGraph
-    batch_size = 16
-    if len(self.memory) < batch_size:
-      return
-    with mainGraph.as_default():
-      weights = self.model.get_weights()
-    with targetGraph.as_default():
-      target_weights = self.target_model.get_weights()
-    for i in range(len(target_weights)):
-      target_weights[i] = weights[i] * self.tau + target_weights[i] * (1 - self.tau)
-    with targetGraph.as_default():
-      self.target_model.set_weights(target_weights)
 
   def save_model(self, fn):
     self.model.save(fn)
@@ -155,7 +132,6 @@ class Centaur(Aliostad):
       action = np.argmax(self.act(inpt))
       self.remember(self.previous.inputVector, action, reward, inpt)
       self.replay()  # internally iterates default (prediction) model
-      self.target_train()  # iterates target model
     else:
       action = self.getRandomAction()
     self.previous = Round(world, inpt, action)

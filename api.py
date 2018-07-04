@@ -8,7 +8,7 @@ import os
 import codecs
 import random
 import sys
-import hexagon
+import hexagon_agent
 import centaur
 t = time.time()
 app = Flask(__name__)
@@ -26,7 +26,7 @@ def startGame(playerId, gameId):
     if playerId == centaurName:
       players[key].reset()
     else:
-      players[key] = hexagon.Aliostad(playerId)
+      players[key] = hexagon_agent.Aliostad(playerId)
     return '', 200
   except Exception as e:
     return e.message
@@ -38,7 +38,7 @@ def move(playerId, gameId):
   if key not in players:
     return "player not found in this game", 404
   j = request.get_json()
-  s = hexagon.Klass(j)
+  s = hexagon_agent.Klass(j)
   mv = players[key].turn(s.ownedCells)
   if mv is None:
     print('idiot')
