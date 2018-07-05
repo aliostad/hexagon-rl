@@ -1,5 +1,6 @@
-import math
 from random import Random
+from hexagon_gaming import *
+from hexagon import *
 
 r = Random()
 
@@ -9,6 +10,7 @@ def safeMax(list, default=0):
 
 def safeMin(list, default=0):
   return default if len(list) == 0 else min(list)
+
 
 class Klass:
 
@@ -24,26 +26,6 @@ def translateOwnership(owned):
   else:
     return 'E'
 
-class Transaction:
-
-  def __init__(self, fromCell, toCell, resources):
-    self.toCell = toCell
-    self.fromCell = fromCell
-    self.resources = resources
-
-  def __str__(self):
-    return '{}=>{} ({})'.format(self.fromCell, self.toCell, self.resources)
-
-class NeighbourCell:
-
-  def __init__(self, id, isOwned, resources):
-    self.isOwned = isOwned
-    self.id = id
-    self.resources = resources
-
-  def __str__(self):
-    return '{}: {}({})'.format(self.id, translateOwnership(self.isOwned), self.resources)
-
 
 class Strategy:
   Non = "None"
@@ -54,22 +36,6 @@ class Strategy:
   Island = "Island"
 
 
-class MyCell:
-
-  def __init__(self, id, neighbours, resources):
-    '''
-
-    :param id: the id: String
-    :param neighbours: ze ns: List
-    :param resources: ze rezorces: Int
-    '''
-    self.resources = resources
-    self.id = id
-    self.neighbours = neighbours
-
-  def __str__(self):
-    return '{} ({}): {}'.format(self.id, self.resources, '#'.join(map(lambda x: str(x), self.neighbours)))
-
 class TurnStat:
 
   def __init__(self, strategy=None, cellCount=0, resources=0, negative=0, resourceLossStreak=0):
@@ -78,6 +44,7 @@ class TurnStat:
     self.strategy = strategy
     self.negative = negative
     self.resourceLossStreak = resourceLossStreak
+
 
 class UberCell:
 
@@ -159,17 +126,12 @@ class World:
 
 
   def __init__(self, cells):
+    """
 
-    ccells = []
-    for x in cells:
-      nn = []
-      for n in x['neighbours']:
-        nn.append(NeighbourCell(n['id'], n['owned'], n['resourceCount']))
-      c = MyCell(x['id'], nn, x['resourceCount'])
-      ccells.append(c)
-
-    self.cells = {x.id: x for x in ccells}
-    self.uberCells = {x.id: UberCell(x, self) for x in ccells}
+    :type cells: list of CellInfo
+    """
+    self.cells = {x.id: x for x in cells}
+    self.uberCells = {x.id: UberCell(x, self) for x in cells}
     self.resources = sum(self.cells[x].resources for x in self.cells)
     self.cellCount = len(cells)
     self.enemyCounts = self.getOfType(False)
@@ -180,13 +142,26 @@ class World:
     for cid in self.uberCells:
       self.uberCells[cid].calculateDepth2()
 
-class Aliostad:
 
-  def __init__(self, name):
-    self.name = name
-    self.turnNumber = 0
+class Aliostad(Player):
+
+  def __init__(self, name, randomBoost=False):
+    Player.__init__(self, name)
+    self.round_no = 0
     self.history = []
+    self.random_boost = randomBoost
     self.f = open(name + ".log", mode='w')
+
+  @staticmethod
+  def transform_jsoncells_to_infos(cells):
+    ccells = []
+    for x in cells:
+      nn = []
+      for n in x['neighbours']:
+        nn.append(NeighbourInfo(n['id'], n['resourceCount'], n['owned']))
+      c = CellInfo(x['id'], x['resourceCount'], nn)
+      ccells.append(c)
+    return ccells
 
   def getEarlyExpansion(self, world):
     '''
@@ -200,7 +175,7 @@ class Aliostad:
     fromCell = srt[0]
     srt2 = sorted(world.uberCells[fromCell].nones, key=lambda x: world.neighbourhoodNonOwnCounts[x.id], reverse=True)
     toCell = srt2[0]
-    return Transaction(fromCell, toCell.id, int(world.uberCells[fromCell].resources * 51 / 100))
+    return Move(fromCell, toCell.id, int(world.uberCells[fromCell].resources * 51 / 100))
 
   def getBoost(self, world):
     '''
@@ -218,7 +193,7 @@ class Aliostad:
 
     cellToId = srt2[0]
     amount = int(cellFrom.resources * 70 / 100)
-    return Transaction(cellFrom.id, cellToId, amount)
+    return Move(cellFrom.id, cellToId, amount)
     #print "{}: Boost from {} to {} - {} => {}".format(self.name, cellFrom.id,
     #        cellToId, cellFrom.getGivingBoostSuitability(), world.uberCells[cellToId].boostFactor)
 
@@ -238,15 +213,17 @@ class Aliostad:
     cellTo = srt2[0]
     amount = cellTo.resources + ((cellFrom.resources - cellTo.resources) * 70 / 100)
     #print "{}: Attack from {} to {}".format(self.name, cellFrom.id, cellTo.id)
-    return Transaction(cellFrom.id, cellTo.id, amount)
+    return Move(cellFrom.id, cellTo.id, amount)
 
   def timeForBoost(self, world):
     '''
-_history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
-                    .Count(x => x.Strategy == Strateg.Attack) > 1
+
     :param world: a world: World
     :return: res: Boolean
     '''
+    if self.random_boost:
+      return r.uniform(0, 1) < 0.5
+
     goBack = int(math.sqrt(len(world.cells)))
     count = 0
     for i in range(0, goBack):
@@ -259,14 +236,14 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
   def turnx(self, cells):
     '''
 
-    :param cells: asdas : []
-    :return: a tran: Transaction
+    :type cells: lis of CellInfo
+    :return: Move
     '''
 
     if len(self.history) == 0:
       self.history.append(TurnStat(Strategy.Expand))
 
-    self.turnNumber += 1
+    self.round_no += 1
     world = World(cells)
     stat = TurnStat(cellCount=world.cellCount, resources=world.resources,
                                  resourceLossStreak=self.history[-1].resourceLossStreak)
@@ -302,7 +279,7 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
       if any(srt):
         cand = srt[0]
         stat.strategy = Strategy.Island
-        return Transaction(cand[0], cand[1], cand[3]), stat, world
+        return Move(cand[0], cand[1], cand[3]), stat, world
 
     canAcceptCount = len(filter(lambda x: world.uberCells[x].canAcceptTransfer, world.uberCells))
     if canAcceptCount == 0:
@@ -319,10 +296,30 @@ _history.Take(Convert.ToInt32(Math.Log(TurnNumber * 10, 5.8)))
       stat.strategy = Strategy.Attack
       return self.getAttack(world), stat, world
 
-  def turn(self, cells):
+  def move(self, playerView):
+    """
 
-    move, h, world = self.turnx(cells)
+    :type playerView: PlayerView
+    :return: Move
+    """
+    move, h, world = self.turnx(playerView.ownedCells)
     self.history.append(h)
-    self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.turnNumber,
-              h.strategy, move.fromCell, move.toCell, move.resources, world.cells[move.fromCell]))
+    self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
+                                                                   h.strategy,
+                                                                   move.fromCell,
+                                                                   move.toCell,
+                                                                   move.resources,
+                                                                   world.cells[move.fromCell]))
+    return move
+
+  def turn(self, cells):
+    seashells = Aliostad.transform_jsoncells_to_infos(cells)
+    move, h, world = self.turnx(seashells)
+    self.history.append(h)
+    self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
+                                                                   h.strategy,
+                                                                   move.fromCell,
+                                                                   move.toCell,
+                                                                   move.resources,
+                                                                   world.cells[move.fromCell]))
     return move

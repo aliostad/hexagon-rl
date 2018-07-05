@@ -15,12 +15,13 @@ app = Flask(__name__)
 application = app
 
 centaurName = 'cc'
-
 players = {}
 players[centaurName + '_1'] = centaur.Centaur(centaurName, 'ccc-')
 
+
 @app.route("/api/player/<playerId>/game/<gameId>", methods=['POST'])
 def startGame(playerId, gameId):
+  global players
   try:
     key = playerId + "_" + gameId
     if playerId == centaurName:
@@ -31,9 +32,10 @@ def startGame(playerId, gameId):
   except Exception as e:
     return e.message
 
+
 @app.route("/api/player/<playerId>/game/<gameId>", methods=['PUT'])
 def move(playerId, gameId):
-  #try:
+  global players
   key = playerId + "_" + gameId
   if key not in players:
     return "player not found in this game", 404
@@ -43,11 +45,10 @@ def move(playerId, gameId):
   if mv is None:
     print('idiot')
   return jsonify(mv.__dict__)
-  #except Exception as e:
-    #return e.message
 
 @app.route("/api/player/<playerId>/game/<gameId>", methods=['DELETE'])
 def endGame(playerId, gameId):
+  global players
   key = playerId + "_" + gameId
   if key not in players:
     return "player not found in this game", 404

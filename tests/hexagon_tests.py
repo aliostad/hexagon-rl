@@ -59,4 +59,5 @@ class BoardTests(unittest.TestCase):
 
     infos = b.get_cell_infos_for_player('Ali')
     self.assertEqual(1, len(infos))
-
+    self.assertEqual(6, len(infos[0].neighbours))
+    self.assertTrue(infos[0].neighbours[0].isOwned is None)

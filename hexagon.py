@@ -86,6 +86,7 @@ class NeighbourInfo:
     self.resources = resources
     self.isOwned = isOwned
 
+
 class Cell:
 
   MaximumResource = 100
@@ -132,10 +133,19 @@ class Cell:
     return True, ''
 
   def to_neighbour_info(self, owner):
-    NeighbourInfo(self.id, self.resources, None if self.owner == Cell.NoOwner else owner == self.owner)
+    return NeighbourInfo(self.id, self.resources, None if self.owner == Cell.NoOwner else owner == self.owner)
 
   def increment_resources(self):
     self.resources = min(Cell.MaximumResource, self.resources+1)
+
+
+class BoardSnapshot:
+  def __init__(self, cells):
+    """
+
+    :type cells: list of Cell
+    """
+    self.cells = cells
 
 
 class Board:
@@ -189,7 +199,6 @@ class Board:
       for nid in filter(lambda x: x.distance_to_centre == op.distance_to_centre, op.get_neighbours()):
         self.cells[cid].neighbours[nid] = None  # add
 
-
   def get_cell_info(self, id):
     """
 
@@ -198,7 +207,6 @@ class Board:
     """
     cell = self.cells[id]
     return CellInfo(cell.id, cell.resources, [self.cells[cid].to_neighbour_info(cell.owner) for cid in cell.neighbours])
-
 
   def get_cell_infos_for_player(self, playerName):
     """
@@ -209,3 +217,37 @@ class Board:
     return [self.get_cell_info(cell.id) for cell in
             map(lambda cid: self.cells[cid], filter(lambda cid: self.cells[cid].owner == playerName, self.cells))]
 
+  def get_snapshot(self):
+    """
+
+    :return: BoardSnapshot
+    """
+    return BoardSnapshot(self.cells.values())
+
+  def increment_resources(self):
+    for cell in self.cells.values():
+      cell.increment_resources()
+
+  def change_ownership(self, id, owner, resources=None):
+    """
+
+    :type id: CellId
+    :type owner: str
+    :type resources: int
+    :return:
+    """
+    self.cells[id].owner = owner
+    if resources is not None:
+      self.cells[id].resources = resources
+
+  def try_transfer(self, move):
+    """
+
+    :type move: Move
+    :return: (bool, error)
+    """
+    if move.fromCell not in self.cells:
+      return False, 'Cell does not exist on the board: {}'.format(move.fromCell)
+    elif move.toCell not in self.cells:
+      return False, 'Cell does not exist on the board: {}'.format(move.toCell)
+    return self.cells[move.toCell].try_transfer_from( self.cells[move.fromCell], move.resources)
