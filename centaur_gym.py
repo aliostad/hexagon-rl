@@ -1,25 +1,30 @@
 from centaur import *
-from hexagon_gaming import *
 from hexagon_agent import *
 
 class CentaurGym:
   def __init__(self):
     self.players = [
+      Aliostad('random05', 0.5),
+      Aliostad('random03', 0.3),
       Aliostad('Ali-1'),
-      Aliostad('Ali-2'),
-      Aliostad('Ali-3'),
       Centaur('centaur', 'zibolon')
     ]
+    self.game = None
 
   def start(self, rounds=1000):
-    game = Game('my-game', self.players, 8)
-    game.start()
+    self.game = Game('my-game', self.players, 8)
+    self.game.start()
     for i in range(0, rounds):
-      stats = game.run_sync()
+      stats, finished = self.game.run_sync()
       for s in stats:
         print(s)
+      if finished:
+        break
 
+  def finish(self):
+    self.game.finish()
 
 if __name__ == '__main__':
   gym = CentaurGym()
   gym.start()
+  gym.f

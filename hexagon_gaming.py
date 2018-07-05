@@ -142,7 +142,8 @@ class Game:
 
     # OK now increment
     self.board.increment_resources()
-    return self.get_player_stats()
+    stats = self.get_player_stats()
+    return self.get_player_stats(), max(map(lambda x: x.cellsOwned, stats)) == sum(map(lambda x: x.cellsOwned, stats))
 
   def get_player_stat(self, name):
     infos = self.board.get_cell_infos_for_player(name)

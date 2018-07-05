@@ -145,11 +145,11 @@ class World:
 
 class Aliostad(Player):
 
-  def __init__(self, name, randomBoost=False):
+  def __init__(self, name, randomBoostFactor=None):
     Player.__init__(self, name)
     self.round_no = 0
     self.history = []
-    self.random_boost = randomBoost
+    self.random_boost = randomBoostFactor
     self.f = open(name + ".log", mode='w')
 
   @staticmethod
@@ -194,8 +194,6 @@ class Aliostad(Player):
     cellToId = srt2[0]
     amount = int(cellFrom.resources * 70 / 100)
     return Move(cellFrom.id, cellToId, amount)
-    #print "{}: Boost from {} to {} - {} => {}".format(self.name, cellFrom.id,
-    #        cellToId, cellFrom.getGivingBoostSuitability(), world.uberCells[cellToId].boostFactor)
 
   def getAttack(self, world):
     '''
@@ -221,8 +219,8 @@ class Aliostad(Player):
     :param world: a world: World
     :return: res: Boolean
     '''
-    if self.random_boost:
-      return r.uniform(0, 1) < 0.5
+    if self.random_boost is not None:
+      return r.uniform(0, 1) < self.random_boost
 
     goBack = int(math.sqrt(len(world.cells)))
     count = 0

@@ -122,7 +122,7 @@ class Cell:
       if self.resources > transfer:
         return False, 'Cell {} cannot be captured since it has {} but transfer from {} is only {}'.format(
           self.id, self.resources, fromCell.id, transfer)
-      elif not self.id in fromCell.id.get_neighbours():
+      elif not self.id in fromCell.neighbours:
         return False, 'Cell {} cannot capture {} since they are not neighbours'.format(fromCell.id, self.id)
 
     if self.owner == fromCell.owner:
@@ -130,13 +130,16 @@ class Cell:
     else:
       self.resources = transfer - self.resources
     fromCell.resources -= transfer
+    self.owner = fromCell.owner
+
     return True, ''
 
   def to_neighbour_info(self, owner):
     return NeighbourInfo(self.id, self.resources, None if self.owner == Cell.NoOwner else owner == self.owner)
 
   def increment_resources(self):
-    self.resources = min(Cell.MaximumResource, self.resources+1)
+    if self.owner != Cell.NoOwner:
+      self.resources = min(Cell.MaximumResource, self.resources+1)
 
 
 class BoardSnapshot:
