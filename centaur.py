@@ -96,10 +96,10 @@ class Centaur(Aliostad):
     self.model.save(fn)
 
 
-  def calculateScoreForRound(self, cells):
+  def calculateScoreForRound(self, cells, round_no):
     cnt = len(cells)
     sumz = sum(map(lambda x: x.resources, cells.values()), 1)
-    return cnt + math.log(sumz, 3)
+    return cnt + math.log(sumz, 3) - math.log(round_no, 3)
 
   def buildInput(self, world):
     inpt = [np.array([1, 0, 0, 0, 0]) for i in range(0, self.MAX_NODES)]
@@ -126,8 +126,8 @@ class Centaur(Aliostad):
     inpt = self.buildInput(world)
     action = None
     if self.previous is not None:
-      previousScore = self.calculateScoreForRound(self.previous.world.cells)
-      newScore = self.calculateScoreForRound(world.cells)
+      previousScore = self.calculateScoreForRound(self.previous.world.cells, self.round_no)
+      newScore = self.calculateScoreForRound(world.cells, self.round_no)
       reward = newScore - previousScore - len(self.previous.world.cells)  # because every turn a cell gets 1 resource
       action = np.argmax(self.act(inpt))
       self.remember(self.previous.inputVector, action, reward, inpt)
