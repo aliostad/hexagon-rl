@@ -79,7 +79,7 @@ class CentaurEnv(Env):
 
     if isFinished:
       for stat in stats:
-        print('{} {} ({})'.format(stat.playerName, stats.cellsOwned, stat.totalResources))
+        print('{} {} ({})'.format(stat.playerName, stat.cellsOwned, stat.totalResources))
     return PlayerView(self.game.round_no, info), reward, isFinished, {}
 
   def close(self):
@@ -93,7 +93,7 @@ class CentaurEnv(Env):
 
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
     self.players = [self.centaur, Aliostad('ali'), Aliostad('random3', 0.3), Aliostad('random5', 0.5)]
-    self.game = Game(EnvDef.game_name, self.players, radius=8)
+    self.game = Game(EnvDef.game_name, self.players, radius=6)
     self.game.start()
     return PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
 
