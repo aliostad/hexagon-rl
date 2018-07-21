@@ -24,6 +24,7 @@ class CentaurPlayer(Aliostad):
     Aliostad.__init__(self, name)
     self.is_time_for_boost = None
     self.current_move = None
+    self.was_called = False
 
   def timeForBoost(self, world):
     """
@@ -31,9 +32,11 @@ class CentaurPlayer(Aliostad):
     :type world: World
     :return:
     """
+    self.was_called = True
     return self.is_time_for_boost
 
   def move(self, playerView):
+    self.was_called = False
     return self.current_move
 
 
@@ -46,6 +49,7 @@ class CentaurEnv(Env):
     self.centaur = None
     self.cell_count = 1
     self.resources = 100
+    self.world = None
 
   def configure(self, *args, **kwargs):
     pass
@@ -58,6 +62,9 @@ class CentaurEnv(Env):
     pass
 
   def step(self, action):
+    self.centaur.is_time_for_boost = action == 1
+    action = self.centaur.movex(self.world)
+
     self.centaur.current_move = action
     stats, isFinished = self.game.run_sync()
     info = self.game.board.get_cell_infos_for_player(EnvDef.centaur_name)
@@ -65,10 +72,14 @@ class CentaurEnv(Env):
     if len(info) == 0:
       isFinished = True  # it has no cells anymore
     else:
-      reward = len(info) - self.cell_count
+      reward = (len(info) - self.cell_count) if self.centaur.was_called else 0
       self.cell_count = len(info)
     if self.game.round_no % 100 == 0:
       print(self.cell_count)
+
+    if isFinished:
+      for stat in stats:
+        print('{} {} ({})'.format(stat.playerName, stats.cellsOwned, stat.totalResources))
     return PlayerView(self.game.round_no, info), reward, isFinished, {}
 
   def close(self):
@@ -82,7 +93,7 @@ class CentaurEnv(Env):
 
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
     self.players = [self.centaur, Aliostad('ali'), Aliostad('random3', 0.3), Aliostad('random5', 0.5)]
-    self.game = Game(EnvDef.game_name, self.players, radius=6)
+    self.game = Game(EnvDef.game_name, self.players, radius=8)
     self.game.start()
     return PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
 
@@ -126,8 +137,7 @@ class CentaurProcessor(Processor):
     return inpt
 
   def process_action(self, action):
-    self.env.centaur.is_time_for_boost = action == 1
-    return self.env.centaur.movex(self.world)
+    return action  # this is due to a BUG in keras-rl when it tries to calc mean
 
   def process_observation(self, observation):
     """
@@ -135,8 +145,8 @@ class CentaurProcessor(Processor):
     :type observation: PlayerView
     :return:
     """
-    self.world = self.env.centaur.build_world(observation.ownedCells)
-    return self.buildInput(self.world)
+    self.env.world = self.env.centaur.build_world(observation.ownedCells)
+    return self.buildInput(self.env.world)
 
 # _____________________________________________________________________________________________________________________________________
 
