@@ -174,3 +174,5 @@ if __name__ == '__main__':
   # slows down training quite a lot. You can always safely abort the training prematurely using
   # Ctrl + C.
   cem.fit(env, nb_steps=100000, visualize=False, verbose=2)
+
+  cem.save_weights('cem_{}_params.h5f'.format('sisi'), overwrite=True)
