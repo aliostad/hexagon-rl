@@ -231,22 +231,27 @@ class Aliostad(Player):
           return True
     return False
 
-  def turnx(self, cells):
-    '''
+  def build_world(self, cells):
+    """
 
-    :type cells: lis of CellInfo
-    :return: Move
-    '''
-
+    :type cells: list of CellInfo
+    :return:
+    """
     if len(self.history) == 0:
       self.history.append(TurnStat(Strategy.Expand))
 
     self.round_no += 1
     world = World(cells)
+    return world
+
+  def turnx(self, world):
+    '''
+
+    :type world: World
+    :return: Move
+    '''
     stat = TurnStat(cellCount=world.cellCount, resources=world.resources,
                                  resourceLossStreak=self.history[-1].resourceLossStreak)
-
-    #print "{} ({}) => {}".format(self.name, self.turnNumber, self.history[-1].strategy)
 
     if self.history[-1].resources > stat.resources:
       stat.resourceLossStreak += 1
@@ -300,7 +305,23 @@ class Aliostad(Player):
     :type playerView: PlayerView
     :return: Move
     """
-    move, h, world = self.turnx(playerView.ownedCells)
+    move, h, world = self.turnx(self.build_world(playerView.ownedCells))
+    self.history.append(h)
+    self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
+                                                                   h.strategy,
+                                                                   move.fromCell,
+                                                                   move.toCell,
+                                                                   move.resources,
+                                                                   world.cells[move.fromCell]))
+    return move
+
+  def movex(self, world):
+    """
+
+    :type world: World
+    :return: Move
+    """
+    move, h, worldx = self.turnx(world)
     self.history.append(h)
     self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
                                                                    h.strategy,
@@ -312,7 +333,7 @@ class Aliostad(Player):
 
   def turn(self, cells):
     seashells = Aliostad.transform_jsoncells_to_infos(cells)
-    move, h, world = self.turnx(seashells)
+    move, h, world = self.turnx(self.build_world(seashells))
     self.history.append(h)
     self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
                                                                    h.strategy,

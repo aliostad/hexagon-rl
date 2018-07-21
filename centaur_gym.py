@@ -27,4 +27,4 @@ class CentaurGym:
 if __name__ == '__main__':
   gym = CentaurGym()
   gym.start()
-  gym.f
+  gym.finish()

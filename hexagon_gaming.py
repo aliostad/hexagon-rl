@@ -96,7 +96,7 @@ class Game:
 
   @staticmethod
   def get_optimum_board_size(number_of_players):
-    return round(math.sqrt(number_of_players) * 5)
+    return int(math.sqrt(number_of_players) * 5)
 
   def _put_players_on_seeds(self):
     # HACK!!!
@@ -129,9 +129,10 @@ class Game:
       try:
         infos = self.board.get_cell_infos_for_player(p.name)
         view = PlayerView(self.round_no, infos)
-        mv = p.move(view)
-        if mv is not None:
-          moves.append((p, mv))
+        if len(infos) > 0:
+          mv = p.move(view)
+          if mv is not None:
+            moves.append((p, mv))
       except Exception as e:
         print('Error in move {} for player {}: {}'.format(self.round_no, p.name, e.message))
       for t in moves:

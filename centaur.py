@@ -6,10 +6,10 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation
 from collections import deque
 from keras import backend as K
+import tensorflow as tf
 
 K.clear_session()
 
-import tensorflow as tf
 graph = None
 
 class Round:
@@ -95,7 +95,6 @@ class Centaur(Aliostad):
   def save_model(self, fn):
     self.model.save(fn)
 
-
   def calculateScoreForRound(self, cells, round_no):
     cnt = len(cells)
     sumz = sum(map(lambda x: x.resources, cells.values()), 1)
@@ -136,7 +135,7 @@ class Centaur(Aliostad):
       action = self.getRandomAction()
     self.previous = Round(world, inpt, action)
     res = action == 1
-    print res
+    print(res)
     return res
 
 if __name__ == "__main__":
