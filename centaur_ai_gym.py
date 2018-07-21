@@ -1,4 +1,5 @@
 from keras.layers import Flatten
+from keras.models import load_model
 from rl.agents import CEMAgent
 from rl.core import Env, Processor
 from rl.memory import EpisodeParameterMemory
@@ -7,7 +8,8 @@ from hexagon_gaming import *
 from hexagon import *
 from hexagon_agent import *
 from centaur import *
-
+import os
+import sys
 
 # _____________________________________________________________________________________________________________________________________
 class EnvDef:
@@ -93,7 +95,7 @@ class CentaurEnv(Env):
 
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
     self.players = [self.centaur, Aliostad('ali'), Aliostad('random3', 0.3), Aliostad('random5', 0.5)]
-    self.game = Game(EnvDef.game_name, self.players, radius=8)
+    self.game = Game(EnvDef.game_name, self.players, radius=9)
     self.game.start()
     return PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
 
@@ -157,6 +159,9 @@ if __name__ == '__main__':
   env.seed(42)
 
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
+
+  modelName = 'cem_{}_params.h5f'.format('sisi')
+
   model = Sequential()
   model.add(Flatten(input_shape=(1, ) + (EnvDef.HASH_POOL * EnvDef.NODE_FEATURE_COUNT, )))
   model.add(Dense(48, activation="relu"))
@@ -169,10 +174,15 @@ if __name__ == '__main__':
   cem = CEMAgent(model=model, nb_actions=EnvDef.ACTION_SPACE, memory=memory,
                  batch_size=50, nb_steps_warmup=2000, train_interval=50, elite_frac=0.05, processor=CentaurProcessor(env))
   cem.compile()
+  if os.path.exists(modelName):
+    cem.load_weights(modelName)
 
-  # Okay, now it's time to learn something! We visualize the training here for show, but this
-  # slows down training quite a lot. You can always safely abort the training prematurely using
-  # Ctrl + C.
-  cem.fit(env, nb_steps=100000, visualize=False, verbose=2)
-
-  cem.save_weights('cem_{}_params.h5f'.format('sisi'), overwrite=True)
+  if len(sys.argv) == 1:
+    print('Usage: python centaur_ai_gym.py (train|test)')
+  elif sys.argv[1] == 'train':
+    cem.fit(env, nb_steps=100000, visualize=False, verbose=2)
+    cem.save_weights(modelName + str(r.uniform(0,10000)), overwrite=True)
+  elif sys.argv[1] == 'test':
+    cem.test(env, nb_episodes=1)
+  else:
+    print('argument not recognised: ' + sys.argv[1])
