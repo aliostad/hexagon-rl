@@ -183,6 +183,6 @@ if __name__ == '__main__':
     cem.fit(env, nb_steps=100000, visualize=False, verbose=2)
     cem.save_weights(modelName + str(r.uniform(0,10000)), overwrite=True)
   elif sys.argv[1] == 'test':
-    cem.test(env, nb_episodes=1)
+    cem.test(env, nb_episodes=100)
   else:
     print('argument not recognised: ' + sys.argv[1])
