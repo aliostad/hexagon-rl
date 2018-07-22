@@ -33,7 +33,7 @@ Danske Bank implementation has these characteristics:
 The implementation in this reproduction has these differences:
  - All edge cells (other than poles) have 7 neighbours rather than 6
  - Cells have consistent (according to hexagonal addressing) naming rather than random names
- - Order of plaing moves at each round is random hence likelihood of moves overwriting other moves is equal for all players.
+ - Order of playing moves at each round is random hence likelihood of moves overwriting other moves is equal for all players.
 
 
 
