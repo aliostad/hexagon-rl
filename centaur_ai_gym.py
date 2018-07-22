@@ -84,7 +84,7 @@ class CentaurEnv(Env):
       else:
         self.leaderBoard[winner.playerName] = 1
       for stat in stats:
-        print('{} {} ({})'.format(stat.playerName, stat.cellsOwned, stat.totalResources))
+        print(' - {} {} ({})'.format(stat.playerName, stat.cellsOwned, stat.totalResources))
 
       for name in self.leaderBoard:
         print('{}: {}'.format(name, self.leaderBoard[name]))
