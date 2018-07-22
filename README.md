@@ -3,6 +3,7 @@ A Reinforcement Learning implementation for Danske Bank's Hexagon game. \
 
 **IMPORTANT NOTE**: While the code is distributed under MIT license, **all legal rights for the Hexagon game itself belongs to [Danske Bank](https://danskebank.com/).** The game has been reproduced with permission and this reproduction is only intended for non-commercial and educational purposes.
 
+![hexagon](https://raw.githubusercontent.com/aliostad/hexagon-rl/master/hexagon.jpg)
 
 ## What is Hexagon Game?
 Hexagon is a simple round-based strategy game developed by [Danske Bank](https://danskebank.com/) ideal for autonomous agents. The game is played by two or more players/agents in a hexagonal shaped board made of hexagonal cells - similar to a bee hive - and the goal of the game is to occupy all cells within the game.
