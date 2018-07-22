@@ -49,6 +49,7 @@ class CentaurEnv(Env):
     self.cell_count = 1
     self.resources = 100
     self.world = None
+    self.leaderBoard = {}
 
   def configure(self, *args, **kwargs):
     pass
@@ -77,8 +78,17 @@ class CentaurEnv(Env):
       print(self.cell_count)
 
     if isFinished:
+      winner = stats[0]
+      if winner.playerName in self.leaderBoard:
+        self.leaderBoard[winner.playerName] += 1
+      else:
+        self.leaderBoard[winner.playerName] = 1
       for stat in stats:
         print('{} {} ({})'.format(stat.playerName, stat.cellsOwned, stat.totalResources))
+
+      for name in self.leaderBoard:
+        print('{}: {}'.format(name, self.leaderBoard[name]))
+
     return PlayerView(self.game.round_no, info), float(reward), isFinished, {}
 
   def close(self):

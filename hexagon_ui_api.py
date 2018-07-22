@@ -2,10 +2,9 @@ from __future__ import unicode_literals
 from flask import Flask, jsonify, request, send_from_directory
 import time
 import threading
-import json
-from hexagon import *
 from hexagon_gaming import *
 import jsonpickle
+import logging
 
 games = {}
 t = time.time()
@@ -51,6 +50,9 @@ def run_app():
   app.run(debug=False, use_reloader=False, host='0.0.0.0', port=19690, threaded=True)
 
 def run_in_background():
+  log = logging.getLogger('werkzeug')
+  log.disabled = True
+  app.logger.disabled = True
   th = threading.Thread(target=run_app)
   th.setDaemon(True)
   th.start()
