@@ -1,0 +1,57 @@
+<html xmlns="http://www.w3.org/1999/html">
+<head>
+  <script type="text/javascript" src="js/d3.js"></script>
+  <script type="text/javascript" src="js/hex.js"></script>
+  <script type="text/javascript" src="js/jquery-3.3.1.min.js"></script>
+
+  <style type="text/css">
+#gameInfo {
+  font-size: 24px;
+  color: #115446;
+  font-weight: bold;
+  font-family: "Open Sans", arial;
+  padding: 5px;
+
+}
+
+#gameName {
+  color: #DF744A;
+}
+
+#gameStatus {
+  color: #DCB239;
+}
+
+#status {
+  border: 2px solid #CFA;
+}
+
+#newGame {
+  color: #7976bc;
+  float: right;
+  font-weight: normal;
+  cursor: hand;
+}
+
+  </style>
+</head>
+<body>
+<table width="100%">
+  <tr>
+    <td width="720" valign="top"><span id="chart"></span></td>
+    <td valign="top">
+      <div id="status">
+        <div id="gameInfo">Game <span id="gameName"></span> - Round: <span id="gameStatus"></span>
+        <!--<span id="newGame">[New Game!]</span>-->
+        </div>
+        <div id="display"></div>
+      </div>
+    </td>
+  </tr>
+</table>
+
+
+<script type="text/javascript" src="js/app.js"></script>
+
+</body>
+</html>

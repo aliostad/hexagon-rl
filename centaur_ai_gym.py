@@ -6,8 +6,9 @@ from centaur import *
 from random import shuffle
 import os
 import sys
+import hexagon_ui_api
 
-# _____________________________________________________________________________________________________________________________________
+# ______________________________________________________________________________________________________________________________
 class EnvDef:
   centaur_name = 'centaur'
   game_name = '1'
@@ -16,7 +17,7 @@ class EnvDef:
   ACTION_SPACE = 2
 
 
-# _____________________________________________________________________________________________________________________________________
+# __________________________________________________________________________________________________________________________
 class CentaurPlayer(Aliostad):
   def __init__(self, name):
     Aliostad.__init__(self, name)
@@ -38,7 +39,7 @@ class CentaurPlayer(Aliostad):
     return self.current_move
 
 
-# _____________________________________________________________________________________________________________________________________
+# __________________________________________________________________________________________________________________________
 class CentaurEnv(Env):
   def __init__(self):
     self.players = []
@@ -93,11 +94,12 @@ class CentaurEnv(Env):
     self.players = [Aliostad('ali'), Aliostad('random3', 0.3), self.centaur, Aliostad('random5', 0.5)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=9)
+    hexagon_ui_api.games[EnvDef.game_name] = self.game
     self.game.start()
     return PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
 
 
-# _____________________________________________________________________________________________________________________________________
+# ____________________________________________________________________________________________________________________________
 class CentaurProcessor(Processor):
   def __init__(self, envi):
     """
@@ -147,7 +149,7 @@ class CentaurProcessor(Processor):
     self.env.world = self.env.centaur.build_world(observation.ownedCells)
     return self.buildInput(self.env.world)
 
-# _____________________________________________________________________________________________________________________________________
+# ______________________________________________________________________________________________________________________________
 
 
 if __name__ == '__main__':
@@ -174,6 +176,7 @@ if __name__ == '__main__':
   if os.path.exists(modelName):
     cem.load_weights(modelName)
 
+  hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':

@@ -37,6 +37,20 @@ class PlayerStat:
   def __str__(self):
     return '{}: {}\t\t{}\t{}'.format(self.roundNo, self.playerName, self.cellsOwned, self.totalResources)
 
+class GameStat:
+  def __init__(self, name, rnd, playerStats, finished):
+    """
+
+    :type name: str
+    :type rnd: int
+    :type playerStats: list of PlayerStat
+    :param finished: boolean
+    """
+    self.name = name
+    self.round = rnd
+    self.playerStats = playerStats
+    self.finished = finished
+
 
 class Player:
   """

@@ -1,3 +1,5 @@
+import json
+
 class CellId:
   _poleCache = {}
 
@@ -13,6 +15,9 @@ class CellId:
 
   def __str__(self):
     return '{}_{}'.format(self.nwes, self.x)
+
+  def toJson(self):
+    return self.__str__()
 
   def __hash__(self):
     return self.__str__().__hash__()
