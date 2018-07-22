@@ -1,13 +1,9 @@
 from keras.layers import Flatten
-from keras.models import load_model
 from rl.agents import CEMAgent
 from rl.core import Env, Processor
 from rl.memory import EpisodeParameterMemory
-
-from hexagon_gaming import *
-from hexagon import *
-from hexagon_agent import *
 from centaur import *
+from random import shuffle
 import os
 import sys
 
@@ -82,7 +78,7 @@ class CentaurEnv(Env):
     if isFinished:
       for stat in stats:
         print('{} {} ({})'.format(stat.playerName, stat.cellsOwned, stat.totalResources))
-    return PlayerView(self.game.round_no, info), reward, isFinished, {}
+    return PlayerView(self.game.round_no, info), float(reward), isFinished, {}
 
   def close(self):
     print('closing CentaurEnv')
@@ -94,7 +90,8 @@ class CentaurEnv(Env):
       self.game.finish()
 
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
-    self.players = [self.centaur, Aliostad('ali'), Aliostad('random3', 0.3), Aliostad('random5', 0.5)]
+    self.players = [Aliostad('ali'), Aliostad('random3', 0.3), self.centaur, Aliostad('random5', 0.5)]
+    shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=9)
     self.game.start()
     return PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
@@ -181,7 +178,7 @@ if __name__ == '__main__':
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
     cem.fit(env, nb_steps=100000, visualize=False, verbose=2)
-    cem.save_weights(modelName + str(r.uniform(0,10000)), overwrite=True)
+    cem.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
   elif sys.argv[1] == 'test':
     cem.test(env, nb_episodes=100)
   else:
