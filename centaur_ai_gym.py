@@ -177,7 +177,7 @@ if __name__ == '__main__':
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
-    cem.fit(env, nb_steps=100000, visualize=False, verbose=2)
+    cem.fit(env, nb_steps=300*1000, visualize=False, verbose=2)
     cem.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
   elif sys.argv[1] == 'test':
     cem.test(env, nb_episodes=100)
