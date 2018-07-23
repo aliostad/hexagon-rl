@@ -1,7 +1,10 @@
 from keras.layers import Flatten
-from rl.agents import CEMAgent
+from keras.optimizers import Adam
+from rl.agents import CEMAgent, DQNAgent
 from rl.core import Env, Processor
-from rl.memory import EpisodeParameterMemory
+from rl.memory import EpisodeParameterMemory, SequentialMemory
+from rl.policy import BoltzmannQPolicy
+
 from centaur import *
 from random import shuffle
 import os
@@ -103,7 +106,7 @@ class CentaurEnv(Env):
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
     self.players = [Aliostad('ali'), Aliostad('random3', 0.3), self.centaur, Aliostad('random5', 0.5), Aliostad('random2', 0.2), Aliostad('random27', 0.27)]
     shuffle(self.players)
-    self.game = Game(EnvDef.game_name, self.players, radius=9)
+    self.game = Game(EnvDef.game_name, self.players, radius=11)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
     self.game.start()
     return PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
@@ -167,32 +170,40 @@ if __name__ == '__main__':
   np.random.seed(42)
   env.seed(42)
 
-  memory = EpisodeParameterMemory(limit=1000, window_length=1)
+  memory = SequentialMemory(limit=50000, window_length=1)
 
   modelName = 'cem_{}_params.h5f'.format('sisi')
 
   model = Sequential()
   model.add(Flatten(input_shape=(1, ) + (EnvDef.HASH_POOL * EnvDef.NODE_FEATURE_COUNT, )))
-  model.add(Dense(48, activation="relu"))
-  model.add(Dense(24, activation="relu"))
+  model.add(Dense(32, activation="relu"))
+  model.add(Dense(16, activation="relu"))
   model.add(Dense(EnvDef.ACTION_SPACE))
-  model.add(Activation('softmax'))
-  model.compile(loss="categorical_crossentropy",
-                optimizer='adadelta', metrics=['accuracy'])
+  #model.add(Activation('softmax'))
 
-  cem = CEMAgent(model=model, nb_actions=EnvDef.ACTION_SPACE, memory=memory,
-                 batch_size=50, nb_steps_warmup=2000, train_interval=50, elite_frac=0.05, processor=CentaurProcessor(env))
-  cem.compile()
+  print(model.summary())
+
+  #model.compile(loss="categorical_crossentropy",
+  #             optimizer='adadelta', metrics=['accuracy'])
+
+  policy = BoltzmannQPolicy()
+  # enable the dueling network
+  # you can specify the dueling_type to one of {'avg','max','naive'}
+  dqn = DQNAgent(model=model, nb_actions=EnvDef.ACTION_SPACE, memory=memory, nb_steps_warmup=10,
+                 enable_dueling_network=True, dueling_type='avg',
+                 target_model_update=1e-2, policy=policy, processor=CentaurProcessor(env))
+
+  dqn.compile(Adam(lr=1e-3), metrics=['mae'])
   if os.path.exists(modelName):
-    cem.load_weights(modelName)
+    dqn.load_weights(modelName)
 
   hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
-    cem.fit(env, nb_steps=300*1000, visualize=False, verbose=2)
-    cem.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
+    dqn.fit(env, nb_steps=500*1000, visualize=False, verbose=2)
+    dqn.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
   elif sys.argv[1] == 'test':
-    cem.test(env, nb_episodes=100)
+    dqn.test(env, nb_episodes=100)
   else:
     print('argument not recognised: ' + sys.argv[1])

@@ -133,16 +133,17 @@ class Game:
     :return:
     '''
     # HACK!!!
-    self.board.change_ownership(CellId(-4, 4), self.real_players[0].name, Cell.MaximumResource)
-    self.board.change_ownership(CellId(4, -4), self.real_players[1].name, Cell.MaximumResource)
+    pole = int(2*self.radius/3)
+    self.board.change_ownership(CellId(-pole, pole), self.real_players[0].name, Cell.MaximumResource)
+    self.board.change_ownership(CellId(pole, -pole), self.real_players[1].name, Cell.MaximumResource)
     if len(self.real_players) > 2:
-      self.board.change_ownership(CellId(4, 0), self.real_players[2].name, Cell.MaximumResource)
+      self.board.change_ownership(CellId(pole, 0), self.real_players[2].name, Cell.MaximumResource)
     if len(self.real_players) > 3:
-      self.board.change_ownership(CellId(-4, 0), self.real_players[3].name, Cell.MaximumResource)
+      self.board.change_ownership(CellId(-pole, 0), self.real_players[3].name, Cell.MaximumResource)
     if len(self.real_players) > 4:
-      self.board.change_ownership(CellId(0, 4), self.real_players[4].name, Cell.MaximumResource)
+      self.board.change_ownership(CellId(0, pole), self.real_players[4].name, Cell.MaximumResource)
     if len(self.real_players) > 5:
-      self.board.change_ownership(CellId(0, -4), self.real_players[5].name, Cell.MaximumResource)
+      self.board.change_ownership(CellId(0, -pole), self.real_players[5].name, Cell.MaximumResource)
 
 
   def start(self):
