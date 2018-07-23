@@ -101,7 +101,7 @@ class CentaurEnv(Env):
       self.game.finish()
 
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
-    self.players = [Aliostad('ali'), Aliostad('random3', 0.3), self.centaur, Aliostad('random5', 0.5)]
+    self.players = [Aliostad('ali'), Aliostad('random3', 0.3), self.centaur, Aliostad('random5', 0.5), Aliostad('random2', 0.2), Aliostad('random27', 0.27)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=9)
     hexagon_ui_api.games[EnvDef.game_name] = self.game

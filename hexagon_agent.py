@@ -205,6 +205,15 @@ class Aliostad(Player):
     srt = sorted(world.uberCells, key=lambda x:
     -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
                  , reverse=True)
+
+    if len(srt) == 0:
+      srt = sorted(world.uberCells, key=lambda x:
+      -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
+                   , reverse=True)
+
+      if len(srt) == 0:
+        return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
+
     cellFromId = srt[0]
     cellFrom = world.uberCells[cellFromId]
     srt2 = sorted(cellFrom.enemies, key=lambda x: x.resources * r.uniform(0.1, 05))

@@ -113,6 +113,25 @@ class Game:
     return int(math.sqrt(number_of_players) * 5)
 
   def _put_players_on_seeds(self):
+
+    '''
+    bands = [
+      6,
+      6 + 2*6,
+      6 + 2*6 + 4*6,
+      6 + 2*6 + 4*6 + 8*6
+    ]
+
+    n_left = len(self.real_players)
+    n = 1
+    for i in range(len(bands)-1,0, -1):
+      if n_left > bands[i]:
+        n = i+2
+        break
+
+    while True:
+    :return:
+    '''
     # HACK!!!
     self.board.change_ownership(CellId(-4, 4), self.real_players[0].name, Cell.MaximumResource)
     self.board.change_ownership(CellId(4, -4), self.real_players[1].name, Cell.MaximumResource)
@@ -120,6 +139,11 @@ class Game:
       self.board.change_ownership(CellId(4, 0), self.real_players[2].name, Cell.MaximumResource)
     if len(self.real_players) > 3:
       self.board.change_ownership(CellId(-4, 0), self.real_players[3].name, Cell.MaximumResource)
+    if len(self.real_players) > 4:
+      self.board.change_ownership(CellId(0, 4), self.real_players[4].name, Cell.MaximumResource)
+    if len(self.real_players) > 5:
+      self.board.change_ownership(CellId(0, -4), self.real_players[5].name, Cell.MaximumResource)
+
 
   def start(self):
     if self._started:
