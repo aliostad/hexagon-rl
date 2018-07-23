@@ -101,7 +101,7 @@ class CentaurEnv(Env):
       self.game.finish()
 
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
-    self.players = [Aliostad('ali'), Aliostad('random3', 0.3), self.centaur, Aliostad('random5', 0.5), Aliostad('random2', 0.2), Aliostad('random27', 0.27)]
+    self.players = [Aliostad('ali'), Aliostad('random05', 0.05), self.centaur, Aliostad('random20', 0.2), Aliostad('random10', 0.1), Aliostad('random15', 0.15)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=9)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
@@ -190,7 +190,7 @@ if __name__ == '__main__':
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
-    cem.fit(env, nb_steps=300*1000, visualize=False, verbose=2)
+    cem.fit(env, nb_steps=200*1000, visualize=False, verbose=2)
     cem.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
   elif sys.argv[1] == 'test':
     cem.test(env, nb_episodes=100)
