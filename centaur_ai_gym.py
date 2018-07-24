@@ -18,7 +18,7 @@ class EnvDef:
   HASH_POOL = 10000
   NODE_FEATURE_COUNT = 5
   ACTION_SPACE = 2
-
+  SHORT_MEMORY_SIZE = 4
 
 # __________________________________________________________________________________________________________________________
 class CentaurPlayer(Aliostad):
@@ -53,6 +53,7 @@ class CentaurEnv(Env):
     self.resources = 100
     self.world = None
     self.leaderBoard = {}
+    self.shortMemory = []
 
   def configure(self, *args, **kwargs):
     pass
@@ -94,6 +95,17 @@ class CentaurEnv(Env):
 
     return PlayerView(self.game.round_no, info), float(reward), isFinished, {}
 
+  def push_world(self, world):
+    """
+
+    :type world: World
+    :return:
+    """
+    self.world = world
+    self.shortMemory.append(world)
+    if len(self.shortMemory) > EnvDef.SHORT_MEMORY_SIZE:
+      del self.shortMemory[0]
+
   def close(self):
     print('closing CentaurEnv')
 
@@ -102,6 +114,10 @@ class CentaurEnv(Env):
     self.resources = 100
     if self.game is not None:
       self.game.finish()
+
+    self.shortMemory = []
+    for i in range(0, EnvDef.SHORT_MEMORY_SIZE):
+      self.shortMemory.append(World([]))
 
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
     self.players = [Aliostad('ali'), Aliostad('random05', 0.05), self.centaur, Aliostad('random20', 0.2), Aliostad('random10', 0.1), Aliostad('random15', 0.15)]
@@ -120,7 +136,6 @@ class CentaurProcessor(Processor):
     :type env: CentaurEnv
     """
     self.env = envi
-    self.world = None
 
   def buildInput(self, world):
     """
@@ -159,8 +174,10 @@ class CentaurProcessor(Processor):
     :type observation: PlayerView
     :return:
     """
-    self.env.world = self.env.centaur.build_world(observation.ownedCells)
-    return self.buildInput(self.env.world)
+    self.env.push_world(self.env.centaur.build_world(observation.ownedCells))
+    inpt = np.array([self.buildInput(w) for w in self.env.shortMemory])
+
+    return inpt.flatten()
 
 # ______________________________________________________________________________________________________________________________
 
@@ -175,25 +192,25 @@ if __name__ == '__main__':
   modelName = 'cem_{}_params.h5f'.format('sisi')
 
   model = Sequential()
-  model.add(Flatten(input_shape=(1, ) + (EnvDef.HASH_POOL * EnvDef.NODE_FEATURE_COUNT, )))
+  model.add(Flatten(input_shape=(1, ) + (EnvDef.HASH_POOL * EnvDef.NODE_FEATURE_COUNT * EnvDef.SHORT_MEMORY_SIZE, )))
   model.add(Dense(32, activation="relu"))
   model.add(Dense(16, activation="relu"))
   model.add(Dense(EnvDef.ACTION_SPACE))
-  #model.add(Activation('softmax'))
+  model.add(Activation('softmax'))
 
   print(model.summary())
 
-  #model.compile(loss="categorical_crossentropy",
-  #             optimizer='adadelta', metrics=['accuracy'])
+  model.compile(loss="categorical_crossentropy",
+               optimizer='adadelta', metrics=['accuracy'])
 
   policy = BoltzmannQPolicy()
   # enable the dueling network
   # you can specify the dueling_type to one of {'avg','max','naive'}
   dqn = DQNAgent(model=model, nb_actions=EnvDef.ACTION_SPACE, memory=memory, nb_steps_warmup=10,
                  enable_dueling_network=True, dueling_type='avg',
-                 target_model_update=1e-2, policy=policy, processor=CentaurProcessor(env))
+                 target_model_update=0.01, policy=policy, processor=CentaurProcessor(env))
 
-  dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+  dqn.compile(Adam(lr=0.001), metrics=['mae'])
   if os.path.exists(modelName):
     dqn.load_weights(modelName)
 
@@ -202,7 +219,7 @@ if __name__ == '__main__':
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
 
-    dqn.fit(env, nb_steps=500*1000, visualize=False, verbose=2)
+    dqn.fit(env, nb_steps=50*1000, visualize=False, verbose=2)
     dqn.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
   elif sys.argv[1] == 'test':
     dqn.test(env, nb_episodes=100)
