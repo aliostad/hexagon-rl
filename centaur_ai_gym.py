@@ -19,6 +19,7 @@ class EnvDef:
   NODE_FEATURE_COUNT = 5
   ACTION_SPACE = 2
   SHORT_MEMORY_SIZE = 4
+  MAX_ROUND = 2000
 
 # __________________________________________________________________________________________________________________________
 class CentaurPlayer(Aliostad):
@@ -73,7 +74,7 @@ class CentaurEnv(Env):
     stats, isFinished = self.game.run_sync()
     info = self.game.board.get_cell_infos_for_player(EnvDef.centaur_name)
     reward = -1
-    if len(info) == 0:
+    if len(info) == 0 or self.game.round_no > EnvDef.MAX_ROUND:
       isFinished = True  # it has no cells anymore
     else:
       reward = (len(info) - self.cell_count) if self.centaur.was_called else 0
@@ -120,15 +121,15 @@ class CentaurEnv(Env):
       self.shortMemory.append(World([]))
 
     self.centaur = CentaurPlayer(EnvDef.centaur_name)
-    self.players = [Aliostad('ali'), Aliostad('random05', 0.05), self.centaur, Aliostad('random20', 0.2), Aliostad('random10', 0.1), Aliostad('random15', 0.15)]
+    self.players = [Aliostad('ali'), Aliostad('random15', 0.15), self.centaur, Aliostad('random50', 0.5), Aliostad('random60', 0.6), Aliostad('random70', 0.7)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=11)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
     self.game.start()
     return PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
 
-
 # ____________________________________________________________________________________________________________________________
+
 class CentaurProcessor(Processor):
   def __init__(self, envi):
     """
@@ -219,7 +220,7 @@ if __name__ == '__main__':
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
 
-    dqn.fit(env, nb_steps=50*1000, visualize=False, verbose=2)
+    dqn.fit(env, nb_steps=200*1000, visualize=False, verbose=2)
     dqn.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
   elif sys.argv[1] == 'test':
     dqn.test(env, nb_episodes=100)
