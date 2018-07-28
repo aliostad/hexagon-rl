@@ -225,7 +225,7 @@ if __name__ == '__main__':
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
-    agent.fit(env, nb_steps=100*1000, visualize=False, verbose=2)
+    agent.fit(env, nb_steps=300*1000, visualize=False, verbose=2)
     agent.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
   elif sys.argv[1] == 'test':
     agent.test(env, nb_episodes=100)
