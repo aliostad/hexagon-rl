@@ -7,6 +7,7 @@ from rl.policy import BoltzmannQPolicy
 
 from centaur import *
 from random import shuffle
+from multi_agent import *
 import os
 import sys
 import hexagon_ui_api
@@ -21,13 +22,22 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 4
   MAX_ROUND = 2000
 
+class AgentType:
+  BoostDecision = 'BoostDecision'
+  Attack = 'Attack'
+  Boost = 'Boost'
+
+
 # __________________________________________________________________________________________________________________________
 class SuperCentaurPlayer(Aliostad):
   def __init__(self, name):
     Aliostad.__init__(self, name)
-    self.is_time_for_boost = None
+    self._reset_state()
+
+  def _reset_state(self):
+    self.actions = {}
     self.current_move = None
-    self.was_called = False
+    self.was_called = {}
 
   def timeForBoost(self, world):
     """
@@ -35,16 +45,21 @@ class SuperCentaurPlayer(Aliostad):
     :type world: World
     :return:
     """
-    self.was_called = True
-    return self.is_time_for_boost
+    self.was_called[AgentType.BoostDecision] = True
+    return self.actions[AgentType.BoostDecision] == 1
 
   def move(self, playerView):
-    self.was_called = False
-    return self.current_move
-
+    mv = self.current_move
+    self._reset_state()
+    return mv
+'''
+  def getAttack(self, world):
+    self.was_called[AgentType.Attack] = True
+    return self.actions[AgentType.Attack]
+'''
 
 # __________________________________________________________________________________________________________________________
-class CentaurEnv(Env):
+class HierarchicalCentaurEnv(Env):
   def __init__(self):
     self.players = []
     self.game = None
@@ -66,11 +81,11 @@ class CentaurEnv(Env):
   def render(self, mode='human', close=False):
     pass
 
-  def step(self, action):
-    self.centaur.is_time_for_boost = action == 1
-    action = self.centaur.movex(self.world)
+  def step(self, actions):
+    for name in actions:
+      self.centaur.actions[name] = actions[name]  # we can also deep copy
 
-    self.centaur.current_move = action
+    self.centaur.current_move = self.centaur.movex(self.world)
     stats, isFinished = self.game.run_sync()
     info = self.game.board.get_cell_infos_for_player(EnvDef.centaur_name)
     reward = -1
@@ -95,7 +110,7 @@ class CentaurEnv(Env):
       for name in self.leaderBoard:
         print(' - {}: {}'.format(name, self.leaderBoard[name]))
 
-    return PlayerView(self.game.round_no, info), float(reward), isFinished, {}
+    return PlayerView(self.game.round_no, info), {name: reward for name in actions}, isFinished, {}
 
   def push_world(self, world):
     """
@@ -121,7 +136,7 @@ class CentaurEnv(Env):
     for i in range(0, EnvDef.SHORT_MEMORY_SIZE):
       self.shortMemory.append(World([]))
 
-    self.centaur = CentaurPlayer(EnvDef.centaur_name)
+    self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
     self.players = [Aliostad('ali'), Aliostad('random80', 0.80), self.centaur, Aliostad('random50', 0.5), Aliostad('random60', 0.6), Aliostad('random70', 0.7)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=11)
@@ -130,8 +145,7 @@ class CentaurEnv(Env):
     return PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
 
 # ____________________________________________________________________________________________________________________________
-
-class CentaurProcessor(Processor):
+class CentaurDecisionProcessor(Processor):
   def __init__(self, envi):
     """
 
@@ -181,11 +195,32 @@ class CentaurProcessor(Processor):
 
     return inpt.flatten()
 
+
+
+class DecisionModel:
+  def __init__(self, theMethod):
+    """
+
+    :type theMethod: str
+    """
+    self.modelName = '{}_params.h5f'.format(theMethod) + str(r.uniform(0, 10000))
+    model = Sequential()
+    model.add(Flatten(input_shape=(1,) + (EnvDef.HASH_POOL * EnvDef.NODE_FEATURE_COUNT * EnvDef.SHORT_MEMORY_SIZE,)))
+    model.add(Dense(32, activation="relu"))
+    model.add(Dense(16, activation="relu"))
+    model.add(Dense(EnvDef.ACTION_SPACE))
+    model.add(Activation('softmax'))
+    print(model.summary())
+    model.compile(loss="categorical_crossentropy",
+                  optimizer='adadelta', metrics=['accuracy'])
+    self.model = model
+
+
 # ______________________________________________________________________________________________________________________________
 
 
 if __name__ == '__main__':
-  env = CentaurEnv()
+  env = HierarchicalCentaurEnv()
   np.random.seed(42)
   env.seed(42)
 
@@ -194,40 +229,38 @@ if __name__ == '__main__':
     method = sys.argv[2]
   agent = None
 
-  modelName = '{}_params.h5f'.format(method)
-
-  model = Sequential()
-  model.add(Flatten(input_shape=(1, ) + (EnvDef.HASH_POOL * EnvDef.NODE_FEATURE_COUNT * EnvDef.SHORT_MEMORY_SIZE, )))
-  model.add(Dense(32, activation="relu"))
-  model.add(Dense(16, activation="relu"))
-  model.add(Dense(EnvDef.ACTION_SPACE))
-  model.add(Activation('softmax'))
-  print(model.summary())
-  model.compile(loss="categorical_crossentropy",
-               optimizer='adadelta', metrics=['accuracy'])
+  prc = CentaurDecisionProcessor(env)
+  dec_model = DecisionModel(method)
 
   if method == 'DQN':
     memory = SequentialMemory(limit=50000, window_length=1)
     policy = BoltzmannQPolicy()
     # enable the dueling network
     # you can specify the dueling_type to one of {'avg','max','naive'}
-    agent = DQNAgent(model=model, nb_actions=EnvDef.ACTION_SPACE, memory=memory, nb_steps_warmup=10,
+    agent = DQNAgent(model=dec_model.model, nb_actions=EnvDef.ACTION_SPACE, memory=memory, nb_steps_warmup=10,
                    enable_dueling_network=True, dueling_type='avg',
-                   target_model_update=0.01, policy=policy, processor=CentaurProcessor(env))
+                   target_model_update=0.01, policy=policy, processor=prc)
 
     agent.compile(Adam(lr=0.001), metrics=['mae'])
   elif method == 'CEM':
     memory = EpisodeParameterMemory(limit=1000, window_length=1)
-    agent = CEMAgent(model=model, nb_actions=EnvDef.ACTION_SPACE, memory=memory,
-             batch_size=50, nb_steps_warmup=2000, train_interval=50, elite_frac=0.05, processor=CentaurProcessor(env))
+    agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.ACTION_SPACE, memory=memory,
+             batch_size=50, nb_steps_warmup=2000, train_interval=50, elite_frac=0.05, processor=prc)
     agent.compile()
+  elif method == 'SHUBBA':
+    prc = MultiProcessor({AgentType.BoostDecision: prc})
+    memory = EpisodeParameterMemory(limit=1000, window_length=1)
+    agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.ACTION_SPACE, memory=memory,
+             batch_size=50, nb_steps_warmup=2000, train_interval=50, elite_frac=0.05)
+    agent.compile()
+    agent = MultiAgent({AgentType.BoostDecision: agent}, processor=prc)
 
-  hexagon_ui_api.run_in_background()
+  #hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
-    agent.fit(env, nb_steps=300*1000, visualize=False, verbose=2)
-    agent.save_weights(modelName + str(r.uniform(0, 10000)), overwrite=True)
+    agent.fit(env, nb_steps=3*100, visualize=False, verbose=2)
+    agent.save_weights({AgentType.BoostDecision: dec_model.modelName}, overwrite=True)
   elif sys.argv[1] == 'test':
     agent.test(env, nb_episodes=100)
   else:
