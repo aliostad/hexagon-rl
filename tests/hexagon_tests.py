@@ -32,7 +32,7 @@ class CellTests(unittest.TestCase):
   def test_5_0_is_apole_for_radius_6(self):
     c = CellId(5, 0)
     self.assertTrue(c.is_pole(6))
-
+    
 
 class BoardTests(unittest.TestCase):
 

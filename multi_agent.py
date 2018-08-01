@@ -151,8 +151,8 @@ class MultiAgent(Agent):
 
       if verbose == 1:
           callbacks += [TrainIntervalLogger(interval=log_interval)]
-      elif verbose > 1:
-          callbacks += [TrainEpisodeLogger()]
+      #elif verbose > 1:
+          #callbacks += [TrainEpisodeLogger()]
       if visualize:
           callbacks += [Visualizer()]
       history = History()
@@ -271,7 +271,7 @@ class MultiAgent(Agent):
                   # the *next* state, that is the state of the newly reset environment, is
                   # always non-terminal by convention.
                   self.forward(observation)
-                  self.backward(0., terminal=False)
+                  self.backward({}, terminal=False)
 
                   # This episode is finished, report and reset.
                   episode_logs = {

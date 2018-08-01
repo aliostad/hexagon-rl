@@ -195,6 +195,23 @@ class Aliostad(Player):
     amount = int(cellFrom.resources * 70 / 100)
     return Move(cellFrom.id, cellToId, amount)
 
+  def getAttackFromCellId(self, world):
+    """
+
+    :type world: World
+    :return:
+    """
+    srt = sorted(world.uberCells, key=lambda x:
+    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
+                 , reverse=True)
+    if len(srt) == 0:
+      srt = sorted(world.uberCells, key=lambda x:
+      -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
+                   , reverse=True)
+
+    return None if len(srt) == 0 else srt[0]
+
+
   def getAttack(self, world):
     '''
 
@@ -202,19 +219,12 @@ class Aliostad(Player):
     :param world: the world: World
     :return: tran: Transaction
     '''
-    srt = sorted(world.uberCells, key=lambda x:
-    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
-                 , reverse=True)
 
-    if len(srt) == 0:
-      srt = sorted(world.uberCells, key=lambda x:
-      -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
-                   , reverse=True)
+    cellFromId = self.getAttackFromCellId(world)
 
-      if len(srt) == 0:
-        return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
+    if cellFromId is None:
+      return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
 
-    cellFromId = srt[0]
     cellFrom = world.uberCells[cellFromId]
     srt2 = sorted(cellFrom.enemies, key=lambda x: x.resources * r.uniform(0.1, 05))
     cellTo = srt2[0]
@@ -332,12 +342,11 @@ class Aliostad(Player):
     """
     move, h, worldx = self.turnx(world)
     self.history.append(h)
-    self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
+    self.f.write("{} - {}: From {} to {} with {} \n".format(self.round_no,
                                                                    h.strategy,
                                                                    move.fromCell,
                                                                    move.toCell,
-                                                                   move.resources,
-                                                                   world.cells[move.fromCell]))
+                                                                   move.resources))
     return move
 
   def turn(self, cells):
