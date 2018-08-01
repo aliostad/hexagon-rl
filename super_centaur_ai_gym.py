@@ -1,14 +1,12 @@
 from keras.layers import Flatten
 from keras.optimizers import Adam
 from rl.agents import DQNAgent, CEMAgent
-from rl.core import Env, Processor
 from rl.memory import SequentialMemory, EpisodeParameterMemory
 from rl.policy import BoltzmannQPolicy
 
 from centaur import *
 from random import shuffle
 from multi_agent import *
-import os
 import sys
 import hexagon_ui_api
 
@@ -110,7 +108,7 @@ class HierarchicalCentaurEnv(Env):
       for name in self.leaderBoard:
         print(' - {}: {}'.format(name, self.leaderBoard[name]))
 
-    return PlayerView(self.game.round_no, info), {name: reward for name in actions}, isFinished, {}
+    return PlayerView(self.game.round_no, info), {name: reward for name in self.centaur.was_called}, isFinished, {}
 
   def push_world(self, world):
     """
@@ -255,7 +253,7 @@ if __name__ == '__main__':
     agent.compile()
     agent = MultiAgent({AgentType.BoostDecision: agent}, processor=prc)
 
-  #hexagon_ui_api.run_in_background()
+  hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':

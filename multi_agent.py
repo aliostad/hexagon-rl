@@ -306,6 +306,11 @@ class MultiProcessor(Processor):
     self.inner_processors = innerProcessors
 
   def process_observation(self, observation):
+    """
+    Turns a single observation into many observations based on what each processor needs
+    :param observation:
+    :return:
+    """
     return {name: self.inner_processors[name].process_observation(observation) for name in self.inner_processors}
 
   def process_action(self, actions):
