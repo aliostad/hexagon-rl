@@ -227,6 +227,8 @@ class Aliostad(Player):
 
     cellFrom = world.uberCells[cellFromId]
     srt2 = sorted(cellFrom.enemies, key=lambda x: x.resources * r.uniform(0.1, 05))
+    if len(srt2) == 0:
+      return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
     cellTo = srt2[0]
     amount = cellTo.resources + ((cellFrom.resources - cellTo.resources) * 70 / 100)
     #print "{}: Attack from {} to {}".format(self.name, cellFrom.id, cellTo.id)
