@@ -41,6 +41,7 @@ class SuperCentaurPlayer(Aliostad):
     self.actions = {}
     self.current_move = None
     self.was_called = {}
+    self.illegal_move_by_agents = {}
 
   def timeForBoost(self, world):
     """
@@ -62,6 +63,7 @@ class SuperCentaurPlayer(Aliostad):
     cells = {str(id): world.uberCells[id] for id in world.uberCells}
     sortedCellNames = sorted(cells)
     if len(sortedCellNames) == 0 or len(sortedCellNames) <= index:
+      self.illegal_move_by_agents[AgentType.Attack] = True
       return None
     name = sortedCellNames[index]
     cell = cells[name]
@@ -122,7 +124,8 @@ class HierarchicalCentaurEnv(Env):
 
     observation = PlayerView(self.game.round_no, info)
     self.push_world(self.centaur.build_world(observation.ownedCells))
-    return observation, {name: reward for name in self.centaur.was_called}, isFinished, {}
+    rewards = {name: -50 if name in self.centaur.illegal_move_by_agents else reward for name in self.centaur.was_called}
+    return observation, rewards, isFinished, {}
 
   def push_world(self, world):
     """
@@ -155,18 +158,13 @@ class HierarchicalCentaurEnv(Env):
     self.game = Game(EnvDef.game_name, self.players, radius=11)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
     self.game.start()
-    observation = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
-    self.push_world(self.centaur.build_world(observation.ownedCells))
-    return observation
+    playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
+    wrld = self.centaur.build_world(playerView.ownedCells)
+    self.push_world(wrld)
+    return wrld
 
 # ____________________________________________________________________________________________________________________________
 class CentaurDecisionProcessor(Processor):
-  def __init__(self, envi):
-    """
-
-    :type env: HierarchicalCentaurEnv
-    """
-    self.env = envi
 
   def buildInput(self, world):
     """
@@ -202,21 +200,14 @@ class CentaurDecisionProcessor(Processor):
   def process_observation(self, observation):
     """
 
-    :type observation: PlayerView
+    :type observation: World
     :return:
     """
-    inpt = np.array([self.buildInput(w) for w in self.env.shortMemory])
-    return inpt.flatten()
+    return self.buildInput(observation)
 
 
 # ______________________________________________________________________________________________________________________________
 class CentaurAttackProcessor(Processor):
-  def __init__(self, envi):
-    """
-
-    :type env: HierarchicalCentaurEnv
-    """
-    self.env = envi
 
   def buildInput(self, world):
     """
@@ -280,10 +271,10 @@ class CentaurAttackProcessor(Processor):
   def process_observation(self, observation):
     """
 
-    :type observation: PlayerView
+    :type observation: World
     :return:
     """
-    return self.buildInput(self.env.shortMemory[-1])
+    return self.buildInput(observation)
 
 
 # ______________________________________________________________________________________________________________________________
