@@ -374,7 +374,7 @@ if __name__ == '__main__':
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
     agent.fit(env, nb_steps=300 * 1000, visualize=False, verbose=2)
-    agent.save_weights({AgentType.BoostDecision: dec_model.modelName, AgentType.Attack: attack_model.model}, overwrite=True)
+    agent.save_weights({AgentType.BoostDecision: dec_model.modelName, AgentType.Attack: attack_model.modelName}, overwrite=True)
   elif sys.argv[1] == 'test':
     agent.test(env, nb_episodes=100)
   else:
