@@ -18,7 +18,7 @@ class EnvDef:
   HASH_POOL = 10000
   NODE_FEATURE_COUNT = 5
   DECISION_ACTION_SPACE = 2
-  SHORT_MEMORY_SIZE = 4
+  SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   MAX_CELL_COUNT = 1000
   ATTACK_VECTOR_SIZE = 40
@@ -122,10 +122,11 @@ class HierarchicalCentaurEnv(Env):
       for name in self.leaderBoard:
         print(' - {}: {}'.format(name, self.leaderBoard[name]))
 
-    observation = PlayerView(self.game.round_no, info)
-    self.push_world(self.centaur.build_world(observation.ownedCells))
+    playerView = PlayerView(self.game.round_no, info)
+    wrld = self.centaur.build_world(playerView.ownedCells)
+    self.push_world(wrld)
     rewards = {name: -50 if name in self.centaur.illegal_move_by_agents else reward for name in self.centaur.was_called}
-    return observation, rewards, isFinished, {}
+    return wrld, rewards, isFinished, {}
 
   def push_world(self, world):
     """
@@ -335,7 +336,7 @@ if __name__ == '__main__':
     method = sys.argv[2]
   agent = None
 
-  prc = CentaurDecisionProcessor(env)
+  prc = CentaurDecisionProcessor()
   dec_model = DecisionModel(method)
   attack_model = AttackModel(method)
 
@@ -355,7 +356,7 @@ if __name__ == '__main__':
                      batch_size=50, nb_steps_warmup=2000, train_interval=50, elite_frac=0.05, processor=prc)
     agent.compile()
   elif method == 'SHUBBA':
-    prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor(env)})
+    prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor()})
     memory = EpisodeParameterMemory(limit=1000, window_length=1)
     decision_agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
                      batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
