@@ -282,12 +282,12 @@ class CentaurAttackProcessor(Processor):
 
 
 class DecisionModel:
-  def __init__(self, theMethod):
+  def __init__(self, modelName=None):
     """
 
     :type theMethod: str
     """
-    self.modelName = 'Decision_{}_params.h5f'.format(theMethod) + str(r.uniform(0, 10000))
+    self.modelName = modelName if modelName is not None else 'Decision_model_params.h5f' + str(r.uniform(0, 10000))
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + (EnvDef.HASH_POOL * EnvDef.NODE_FEATURE_COUNT * EnvDef.SHORT_MEMORY_SIZE,)))
     model.add(Dense(32, activation="relu"))
@@ -304,12 +304,12 @@ class DecisionModel:
 
 
 class AttackModel:
-  def __init__(self, theMethod):
+  def __init__(self, modelName=None):
     """
 
     :type theMethod: str
     """
-    self.modelName = 'Attack_{}_params.h5f'.format(theMethod) + str(r.uniform(0, 10000))
+    self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + (EnvDef.MAX_CELL_COUNT * EnvDef.ATTACK_VECTOR_SIZE,)))
     model.add(Dense(24, activation="relu"))
@@ -331,43 +331,25 @@ if __name__ == '__main__':
   np.random.seed(42)
   env.seed(42)
 
-  method = 'CEM'
   if len(sys.argv) > 2:
     method = sys.argv[2]
-  agent = None
 
   prc = CentaurDecisionProcessor()
-  dec_model = DecisionModel(method)
-  attack_model = AttackModel(method)
+  dec_model = DecisionModel()
+  attack_model = AttackModel()
 
-  if method == 'DQN':
-    memory = SequentialMemory(limit=50000, window_length=1)
-    policy = BoltzmannQPolicy()
-    # enable the dueling network
-    # you can specify the dueling_type to one of {'avg','max','naive'}
-    agent = DQNAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory, nb_steps_warmup=10,
-                     enable_dueling_network=True, dueling_type='avg',
-                     target_model_update=0.01, policy=policy, processor=prc)
+  prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor()})
+  memory = EpisodeParameterMemory(limit=1000, window_length=1)
+  decision_agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
+                   batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
 
-    agent.compile(Adam(lr=0.001), metrics=['mae'])
-  elif method == 'CEM':
-    memory = EpisodeParameterMemory(limit=1000, window_length=1)
-    agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
-                     batch_size=50, nb_steps_warmup=2000, train_interval=50, elite_frac=0.05, processor=prc)
-    agent.compile()
-  elif method == 'SHUBBA':
-    prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor()})
-    memory = EpisodeParameterMemory(limit=1000, window_length=1)
-    decision_agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
-                     batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
+  decision_agent.compile()
+  memory2 = EpisodeParameterMemory(limit=1000, window_length=1)
+  attack_agent = CEMAgent(model=attack_model.model, nb_actions=EnvDef.ATTACK_ACTION_SPACE, memory=memory2,
+                   batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
+  attack_agent.compile()
 
-    decision_agent.compile()
-    memory2 = EpisodeParameterMemory(limit=1000, window_length=1)
-    attack_agent = CEMAgent(model=attack_model.model, nb_actions=EnvDef.ATTACK_ACTION_SPACE, memory=memory2,
-                     batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
-    attack_agent.compile()
-
-    agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc)
+  agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc)
 
   hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
