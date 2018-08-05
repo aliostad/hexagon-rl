@@ -261,7 +261,7 @@ class CentaurAttackProcessor(Processor):
         nvector = [0, 0, 0, 1, 0]
         vector = np.concatenate([vector, nvector])
         j += 1
-      inpt[j*EnvDef.ATTACK_VECTOR_SIZE : (j+1) * EnvDef.ATTACK_VECTOR_SIZE] = vector
+      inpt[i*EnvDef.ATTACK_VECTOR_SIZE : (i+1) * EnvDef.ATTACK_VECTOR_SIZE] = vector
       i += 1
 
     return inpt

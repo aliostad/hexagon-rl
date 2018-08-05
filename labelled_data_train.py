@@ -60,7 +60,11 @@ if __name__ == '__main__':
 
   X = []
   Y = []
+  i = 0
   for f in glob.glob(folder + pattern):
+    i += 1
+    if i % 100 == 0:
+      print(i)
     x, y = vectoriser(f)
     X.append(np.array([x]))  # wrapping in another array is due to the way keras-rl ...
     # uses the model expecting another dimension
