@@ -73,7 +73,6 @@ class DataExtractionGym:
 
 
 if __name__ == '__main__':
-  hexagon_ui_api.run_in_background()
   folderName = 'train_data'
   if not os.path.exists(folderName):
     os.makedirs(folderName)
