@@ -248,7 +248,6 @@ class CentaurAttackProcessor(Processor):
       for nn in n_names:
         nc = neighbours[nn]
         nvector = np.array([0, 0, 0, 0, nc.resources])
-        vector = np.concatenate([vector, nvector])
         if nc.isOwned is None:
           nvector[2] = 1
         elif nc.isOwned:
@@ -256,6 +255,7 @@ class CentaurAttackProcessor(Processor):
         else:
           nvector[1] = 1
         j += 1
+        vector = np.concatenate([vector, nvector])
 
       while j < 7:  # fill the rest until 7
         nvector = [0, 0, 0, 1, 0]
