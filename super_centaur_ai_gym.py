@@ -318,7 +318,7 @@ class AttackModel:
     model.add(Activation('softmax'))
     print(model.summary())
     model.compile(loss="categorical_crossentropy",
-                  optimizer=Adam(lr=0.001), metrics=['categorical_accuracy'])
+                  optimizer=Adam(lr=0.01), metrics=['categorical_accuracy'])
     self.model = model
 
 
