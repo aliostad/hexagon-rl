@@ -21,7 +21,7 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   MAX_CELL_COUNT = 1000
-  ATTACK_VECTOR_SIZE = 40
+  ATTACK_VECTOR_SIZE = 9
   ATTACK_ACTION_SPACE = MAX_CELL_COUNT
 
 
@@ -214,19 +214,17 @@ class CentaurAttackProcessor(Processor):
     """
     SIZE: MAX_CELL_COUNT * 11
     cells ordered alphabetically
-    Each input has 40 values (7x5 + 1 + 2 + 2):
+    Each input has 9 values (1 + 4 + 4):
       - Resources
-      - Count of friendly neighbouring cells (for speeding training)
-      - Sum of friendly neighbouring cell resources (for speeding training)
-      - Count of foe neighbouring cell (for speeding training)
-      - Sum of foe neighbouring cell resources (for speeding training)
-      - 7 x structure for each neighbour (ordered by cell_id alphabetically) - 5 elements:
-        - 4 as one hot vector for
-          - friendly [1, 0, 0, 0]
-          - foe [0, 1, 0, 0]
-          - neutral [0, 0, 1, 0]
-          - non-existent [0, 0, 0, 1]
-        - resources
+      - Count of friendly neighbouring cells
+      - Sum of friendly neighbouring cell resources
+      - Min of friendly neighbouring cell resources
+      - Max of friendly neighbouring cell resources
+      - Count of foe neighbouring cell resources
+      - Sum of foe neighbouring cell resources
+      - Min of foe neighbouring cell resources
+      - Max of foe neighbouring cell resources
+
     :type world:
     :return:
     """
@@ -236,31 +234,20 @@ class CentaurAttackProcessor(Processor):
     i = 0
     for name in sortedCellNames:
       cell = cells[name]
+      friendlyResources = map(lambda x: x.resources, cell.owns)
+      foeResources = map(lambda x: x.resources, cell.enemies)
       vector = np.array([cell.resources,
-                         len(cell.owns),
-                         sum(map(lambda x: x.resources, cell.owns)),
-                         len(cell.enemies),
-                         sum(map(lambda x: x.resources, cell.enemies))])
+                         len(friendlyResources),
+                         sum(friendlyResources),
+                         0 if len(friendlyResources) == 0 else min(friendlyResources),
+                         0 if len(friendlyResources) == 0 else max(friendlyResources),
+                         len(foeResources),
+                         sum(foeResources),
+                         0 if len(foeResources) == 0 else min(foeResources),
+                         0 if len(foeResources) == 0 else max(foeResources)
+                         ])
 
-      neighbours = {str(n.id): n for n in cell.neighbours}
-      n_names = sorted(neighbours)
-      j = 0
-      for nn in n_names:
-        nc = neighbours[nn]
-        nvector = np.array([0, 0, 0, 0, nc.resources])
-        if nc.isOwned is None:
-          nvector[2] = 1
-        elif nc.isOwned:
-          nvector[0] = 1
-        else:
-          nvector[1] = 1
-        j += 1
-        vector = np.concatenate([vector, nvector])
 
-      while j < 7:  # fill the rest until 7
-        nvector = [0, 0, 0, 1, 0]
-        vector = np.concatenate([vector, nvector])
-        j += 1
       inpt[i*EnvDef.ATTACK_VECTOR_SIZE : (i+1) * EnvDef.ATTACK_VECTOR_SIZE] = vector
       i += 1
 
