@@ -8,6 +8,7 @@ r = Random()
 def safeMax(list, default=0):
   return default if len(list) == 0 else max(list)
 
+
 def safeMin(list, default=0):
   return default if len(list) == 0 else min(list)
 
@@ -66,15 +67,15 @@ class UberCell:
 
     # how suitable is a cell for receiving boost
     #
-    self.boostFactor = math.sqrt(sum((n.resources for n in self.enemies), 1))  * \
-                        safeMax([n.resources for n in self.enemies], 1) / (self.resources + 1)
+    self.boostFactor = math.sqrt(sum((n.resources for n in self.enemies), 1)) * \
+                       safeMax([n.resources for n in self.enemies], 1) / (self.resources + 1)
     self.powerFactor = self.resources / (safeMin([n.resources for n in self.noneOwns]) + 1)
     self.expansionPotential = len(self.nones) * 100
     self.attackPotential = self.resources * \
                            math.sqrt(max(self.resources - safeMin([n.resources for n in self.noneOwns]), 1)) / \
-                                  math.log(sum([n.resources for n in self.enemies], 1) + 1, 5)
+                           math.log(sum([n.resources for n in self.enemies], 1) + 1, 5)
     self.hasEnemyNeighbours = any(self.enemies)
-    self.canAttack = any(filter(lambda x: x.resources < self.resources+2,  self.enemies))
+    self.canAttack = any(filter(lambda x: x.resources < self.resources + 2, self.enemies))
     self.canAcceptTransfer = len(self.owns) > 0
     self.depth = 0
 
@@ -83,6 +84,7 @@ class UberCell:
 
   def getGivingBoostSuitability(self):
     return (self.depth + 1) * math.sqrt(self.resources + 1) * (1.7 if self.resources == 100 else 1)
+
 
 class World:
 
@@ -123,7 +125,6 @@ class World:
           else:
             dic[n.id] = 1
     return dic
-
 
   def __init__(self, cells):
     """
@@ -188,9 +189,9 @@ class Aliostad(Player):
     srt = sorted(world.uberCells, key=lambda x: world.uberCells[x].getGivingBoostSuitability(), reverse=True)
     cellFromId = srt[0]
     cellFrom = world.uberCells[cellFromId]
-    srt2= sorted(world.uberCells, key=lambda x:
-                 -1000 if not world.uberCells[x].canAcceptTransfer or
-                 x == cellFromId else world.uberCells[x].boostFactor, reverse=True)
+    srt2 = sorted(world.uberCells, key=lambda x:
+    -1000 if not world.uberCells[x].canAcceptTransfer or
+             x == cellFromId else world.uberCells[x].boostFactor, reverse=True)
 
     cellToId = srt2[0]
     amount = int(cellFrom.resources * 70 / 100)
@@ -203,17 +204,11 @@ class Aliostad(Player):
     :return:
     """
     srt = sorted(world.uberCells, key=lambda x:
-    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential *
-                                                  (r.uniform(1.0, 3.0) if self.random_variation else 1)
+                 -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential *
+                 (r.uniform(1.0, 3.0) if self.random_variation else 1)
                  , reverse=True)
-    if len(srt) == 0:
-      srt = sorted(world.uberCells, key=lambda x:
-      -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential *
-                                                    (r.uniform(1.0, 3.0) if self.random_variation else 1)
-                   , reverse=True)
 
     return None if len(srt) == 0 else srt[0]
-
 
   def getAttack(self, world):
     '''
@@ -235,7 +230,7 @@ class Aliostad(Player):
       return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
     cellTo = srt2[0]
     amount = cellTo.resources + ((cellFrom.resources - cellTo.resources) * 70 / 100)
-    #print "{}: Attack from {} to {}".format(self.name, cellFrom.id, cellTo.id)
+    # print "{}: Attack from {} to {}".format(self.name, cellFrom.id, cellTo.id)
     return Move(cellFrom.id, cellTo.id, amount)
 
   def timeForBoost(self, world):
@@ -276,7 +271,7 @@ class Aliostad(Player):
     :return: Move
     '''
     stat = TurnStat(cellCount=world.cellCount, resources=world.resources,
-                                 resourceLossStreak=self.history[-1].resourceLossStreak)
+                    resourceLossStreak=self.history[-1].resourceLossStreak)
 
     if self.history[-1].resources > stat.resources:
       stat.resourceLossStreak += 1
@@ -300,7 +295,7 @@ class Aliostad(Player):
           for n in c.neighbours:
             if any(filter(lambda x: x.id == n.id, c.neighbours)):
               diff = c.resources - n.resources
-              candid = (c.id, n.id, diff, n.resources + (diff * 61 /100))
+              candid = (c.id, n.id, diff, n.resources + (diff * 61 / 100))
               candidateFromCells.append(candid)
 
       srt = sorted(candidateFromCells, key=lambda x: x[2], reverse=True)
@@ -318,7 +313,7 @@ class Aliostad(Player):
       stat.strategy = Strategy.Boost
       return self.getBoost(world), stat, world
     elif stat.resourceLossStreak > 3 or len(filter(lambda x: world.uberCells[x].canAttack,
-                          world.uberCells)) == 0 or self.timeForBoost(world):
+                                                   world.uberCells)) == 0 or self.timeForBoost(world):
       stat.strategy = Strategy.Boost
       return self.getBoost(world), stat, world
     else:
@@ -350,10 +345,10 @@ class Aliostad(Player):
     move, h, worldx = self.turnx(world)
     self.history.append(h)
     self.f.write("{} - {}: From {} to {} with {} \n".format(self.round_no,
-                                                                   h.strategy,
-                                                                   move.fromCell,
-                                                                   move.toCell,
-                                                                   move.resources))
+                                                            h.strategy,
+                                                            move.fromCell,
+                                                            move.toCell,
+                                                            move.resources))
     return move
 
   def turn(self, cells):

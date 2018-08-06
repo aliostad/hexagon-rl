@@ -21,7 +21,7 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   MAX_CELL_COUNT = 1000
-  ATTACK_VECTOR_SIZE = 9
+  ATTACK_VECTOR_SIZE = 10
   ATTACK_ACTION_SPACE = MAX_CELL_COUNT
 
 
@@ -212,9 +212,9 @@ class CentaurAttackProcessor(Processor):
 
   def buildInput(self, world):
     """
-    SIZE: MAX_CELL_COUNT * 11
+    SIZE: MAX_CELL_COUNT * 10
     cells ordered alphabetically
-    Each input has 9 values (1 + 4 + 4):
+    Each input has 9 values (1 + 4 + 4 + 1):
       - Resources
       - Count of friendly neighbouring cells
       - Sum of friendly neighbouring cell resources
@@ -224,6 +224,7 @@ class CentaurAttackProcessor(Processor):
       - Sum of foe neighbouring cell resources
       - Min of foe neighbouring cell resources
       - Max of foe neighbouring cell resources
+      - Count of neutral
 
     :type world:
     :return:
@@ -244,7 +245,8 @@ class CentaurAttackProcessor(Processor):
                          len(foeResources),
                          sum(foeResources),
                          0 if len(foeResources) == 0 else min(foeResources),
-                         0 if len(foeResources) == 0 else max(foeResources)
+                         0 if len(foeResources) == 0 else max(foeResources),
+                         len(cell.nones)
                          ])
 
 
