@@ -312,13 +312,13 @@ class AttackModel:
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + (EnvDef.MAX_CELL_COUNT * EnvDef.ATTACK_VECTOR_SIZE,)))
-    model.add(Dense(24, activation="relu"))
-    model.add(Dense(16, activation="relu"))
+    model.add(Dense(8, activation="relu"))
+    model.add(Dense(8, activation="relu"))
     model.add(Dense(EnvDef.ATTACK_ACTION_SPACE))
     model.add(Activation('softmax'))
     print(model.summary())
     model.compile(loss="categorical_crossentropy",
-                  optimizer=Adam(lr=0.01), metrics=['categorical_accuracy'])
+                  optimizer=Adam(lr=0.001), metrics=['categorical_accuracy'])
     self.model = model
 
 

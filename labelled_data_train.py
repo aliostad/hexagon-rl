@@ -71,5 +71,5 @@ if __name__ == '__main__':
     Y.append(y)
 
   model.model.fit(np.array(X),
-                  np.array(Y), batch_size=100, epochs=200, verbose=1)
+                  np.array(Y), batch_size=100, epochs=2000, verbose=1)
   model.model.save(model.modelName)
