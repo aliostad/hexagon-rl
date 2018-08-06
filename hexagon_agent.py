@@ -66,7 +66,7 @@ class UberCell:
 
     # how suitable is a cell for receiving boost
     #
-    self.boostFactor = math.sqrt(sum((n.resources for n in self.enemies), 1)) * r.uniform(1.0, 2.0) * \
+    self.boostFactor = math.sqrt(sum((n.resources for n in self.enemies), 1))  * \
                         safeMax([n.resources for n in self.enemies], 1) / (self.resources + 1)
     self.powerFactor = self.resources / (safeMin([n.resources for n in self.noneOwns]) + 1)
     self.expansionPotential = len(self.nones) * 100
@@ -82,7 +82,7 @@ class UberCell:
     self.depth = (len(self.owns) * 100) + sum(len(self.world.uberCells[n.id].owns) for n in self.owns)
 
   def getGivingBoostSuitability(self):
-    return (self.depth + 1) * math.sqrt(self.resources + 1) * (1.7 if self.resources == 100 else 1) * r.uniform(1.0, 2.0)
+    return (self.depth + 1) * math.sqrt(self.resources + 1) * (1.7 if self.resources == 100 else 1)
 
 class World:
 
@@ -145,12 +145,13 @@ class World:
 
 class Aliostad(Player):
 
-  def __init__(self, name, randomBoostFactor=None):
+  def __init__(self, name, randomBoostFactor=None, randomVariation=False):
     Player.__init__(self, name)
     self.round_no = 0
     self.history = []
     self.random_boost = randomBoostFactor
     self.f = open(name + ".log", mode='w')
+    self.random_variation = randomVariation
 
   @staticmethod
   def transform_jsoncells_to_infos(cells):
@@ -202,11 +203,13 @@ class Aliostad(Player):
     :return:
     """
     srt = sorted(world.uberCells, key=lambda x:
-    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
+    -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential *
+                                                  (r.uniform(1.0, 3.0) if self.random_variation else 1)
                  , reverse=True)
     if len(srt) == 0:
       srt = sorted(world.uberCells, key=lambda x:
-      -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential * r.uniform(1.0, 3.0)
+      -100 if not world.uberCells[x].canAttack else world.uberCells[x].attackPotential *
+                                                    (r.uniform(1.0, 3.0) if self.random_variation else 1)
                    , reverse=True)
 
     return None if len(srt) == 0 else srt[0]
@@ -226,7 +229,8 @@ class Aliostad(Player):
       return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
 
     cellFrom = world.uberCells[cellFromId]
-    srt2 = sorted(cellFrom.enemies, key=lambda x: x.resources * r.uniform(0.1, 05))
+    srt2 = sorted(cellFrom.enemies, key=lambda x: x.resources *
+                                                  (r.uniform(0.1, 05) if self.random_variation else 1))
     if len(srt2) == 0:
       return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
     cellTo = srt2[0]
@@ -279,7 +283,8 @@ class Aliostad(Player):
     else:
       stat.resourceLossStreak = int(math.sqrt(stat.resourceLossStreak))
 
-    if world.noneCounts > 0 and (world.noneCounts * 8 > world.enemyCounts or r.uniform(0, 1) > 0.9):
+    if world.noneCounts > 0 and (world.noneCounts * 8 > world.enemyCounts or
+                                 (r.uniform(0, 1) > 0.9 if self.random_variation else False)):
       stat.strategy = Strategy.Expand
       t = self.getEarlyExpansion(world)
       stat.strategy = Strategy.Expand
