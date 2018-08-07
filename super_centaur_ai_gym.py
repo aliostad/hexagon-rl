@@ -215,16 +215,16 @@ class CentaurAttackProcessor(Processor):
     SIZE: MAX_CELL_COUNT * 10
     cells ordered alphabetically
     Each input has 9 values (1 + 4 + 4 + 1):
-      - Resources
-      - Count of friendly neighbouring cells
-      - Sum of friendly neighbouring cell resources
-      - Min of friendly neighbouring cell resources
-      - Max of friendly neighbouring cell resources
-      - Count of foe neighbouring cell resources
-      - Sum of foe neighbouring cell resources
-      - Min of foe neighbouring cell resources
-      - Max of foe neighbouring cell resources
-      - Count of neutral
+      0 - Resources
+      1 - Count of friendly neighbouring cells
+      2 - Sum of friendly neighbouring cell resources
+      3 - Min of friendly neighbouring cell resources
+      4 - Max of friendly neighbouring cell resources
+      5 - Count of foe neighbouring cell resources
+      6 - Sum of foe neighbouring cell resources
+      7 - Min of foe neighbouring cell resources
+      8 - Max of foe neighbouring cell resources
+      9 - Count of neutral
 
     :type world:
     :return:

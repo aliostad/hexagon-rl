@@ -32,19 +32,21 @@ class DummySuperCentaurPlayer(Aliostad):
     :return:
     """
     fromId = Aliostad.getAttackFromCellId(self, world)
-    vector = self.attack_processor.process_observation(world)
-    sortedCellNames = sorted(world.uberCells)
-    index = -1
-    for i in range(0, len(sortedCellNames)):
-      if sortedCellNames[i] == fromId:
-        index = i
-        break
-    if index < 0:
-      print('Catastrophe!')
-      raise IndexError()
+    if fromId is not None:
+      vector = self.attack_processor.process_observation(world)
+      cells = {str(id): world.uberCells[id] for id in world.uberCells}
+      sortedCellNames = sorted(cells)
+      index = -1
+      for i in range(0, len(sortedCellNames)):
+        if sortedCellNames[i] == str(fromId):
+          index = i
+          break
+      if index < 0:
+        print('Catastrophe!')
+        raise IndexError()
 
-    fileName = '{}/ATTACK_VECTOR_{}_{}.npy'.format(self.folder, r.randint(1, 1000 * 1000 * 1000), index)
-    np.save(fileName, vector)
+      fileName = '{}/ATTACK_VECTOR_{}_{}.npy'.format(self.folder, r.randint(1, 1000 * 1000 * 1000), index)
+      np.save(fileName, vector)
     return fromId
 
 # ____________________________________________________________________________________________________________________________
