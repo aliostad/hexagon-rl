@@ -302,7 +302,7 @@ class AttackModel:
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + (EnvDef.MAX_CELL_COUNT * EnvDef.ATTACK_VECTOR_SIZE,)))
     model.add(Dense(32, activation="tanh"))
-    model.add(Dense(16, activation="relu"))
+    model.add(Dense(16, activation="tanh"))
     model.add(Dense(EnvDef.ATTACK_ACTION_SPACE))
     model.add(Activation('softmax'))
     print(model.summary())
