@@ -21,7 +21,7 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   MAX_CELL_COUNT = 1000
-  ATTACK_VECTOR_SIZE = 10
+  ATTACK_VECTOR_SIZE = 3
   ATTACK_ACTION_SPACE = MAX_CELL_COUNT
 
 
@@ -226,6 +226,23 @@ class CentaurAttackProcessor(Processor):
       8 - Max of foe neighbouring cell resources
       9 - Count of neutral
 
+'''
+      vector = np.array([cell.resources,
+                         len(friendlyResources),
+                         sum(friendlyResources),
+                         0 if len(friendlyResources) == 0 else min(friendlyResources),
+                         0 if len(friendlyResources) == 0 else max(friendlyResources),
+                         len(foeResources),
+                         sum(foeResources),
+                         0 if len(foeResources) == 0 else min(foeResources),
+                         0 if len(foeResources) == 0 else max(foeResources),
+                         len(cell.nones)
+                         ])
+'''
+      0 - Resources
+      1 - Sum of foe neighbouring cell resources
+      2 - Min of foe neighbouring cell resources
+
     :type world:
     :return:
     """
@@ -238,18 +255,9 @@ class CentaurAttackProcessor(Processor):
       friendlyResources = map(lambda x: x.resources, cell.owns)
       foeResources = map(lambda x: x.resources, cell.enemies)
       vector = np.array([cell.resources,
-                         len(friendlyResources),
                          sum(friendlyResources),
-                         0 if len(friendlyResources) == 0 else min(friendlyResources),
-                         0 if len(friendlyResources) == 0 else max(friendlyResources),
-                         len(foeResources),
-                         sum(foeResources),
-                         0 if len(foeResources) == 0 else min(foeResources),
-                         0 if len(foeResources) == 0 else max(foeResources),
-                         len(cell.nones)
+                         0 if len(foeResources) == 0 else min(foeResources)
                          ])
-
-
       inpt[i*EnvDef.ATTACK_VECTOR_SIZE : (i+1) * EnvDef.ATTACK_VECTOR_SIZE] = vector
       i += 1
 
