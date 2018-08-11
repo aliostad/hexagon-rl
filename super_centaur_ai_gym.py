@@ -20,8 +20,8 @@ class EnvDef:
   DECISION_ACTION_SPACE = 2
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
-  MAX_CELL_COUNT = 1000
-  ATTACK_VECTOR_SIZE = 3
+  MAX_CELL_COUNT = HASH_POOL
+  ATTACK_VECTOR_SIZE = NODE_FEATURE_COUNT
   ATTACK_ACTION_SPACE = MAX_CELL_COUNT
 
 
@@ -167,6 +167,11 @@ class HierarchicalCentaurEnv(Env):
 # ____________________________________________________________________________________________________________________________
 class CentaurDecisionProcessor(Processor):
 
+  @staticmethod
+  def calculate_hash_index(cellName):
+    # type: (str) -> int
+    return int(abs(hash(cellName))) % EnvDef.HASH_POOL
+
   def buildInput(self, world):
     """
     Each input has 5 values:
@@ -183,7 +188,7 @@ class CentaurDecisionProcessor(Processor):
     inpt = [np.array([1, 0, 0, 0, 0]) for i in range(0, EnvDef.HASH_POOL)]
 
     for cell in world.cells.values():
-      id = int(abs(hash(cell.id))) % EnvDef.HASH_POOL
+      id = self.calculate_hash_index(str(cell.id))
       inpt[id] = np.array([0, 1, 0, 0, cell.resources])
       for n in cell.neighbours:
         id = int(abs(hash(n.id))) % EnvDef.HASH_POOL
@@ -208,71 +213,9 @@ class CentaurDecisionProcessor(Processor):
 
 
 # ______________________________________________________________________________________________________________________________
-class CentaurAttackProcessor(Processor):
+class CentaurAttackProcessor(CentaurDecisionProcessor):
+  pass
 
-  def buildInput(self, world):
-    """
-    SIZE: MAX_CELL_COUNT * 10
-    cells ordered alphabetically
-    Each input has 9 values (1 + 4 + 4 + 1):
-      0 - Resources
-      1 - Count of friendly neighbouring cells
-      2 - Sum of friendly neighbouring cell resources
-      3 - Min of friendly neighbouring cell resources
-      4 - Max of friendly neighbouring cell resources
-      5 - Count of foe neighbouring cell resources
-      6 - Sum of foe neighbouring cell resources
-      7 - Min of foe neighbouring cell resources
-      8 - Max of foe neighbouring cell resources
-      9 - Count of neutral
-
-'''
-      vector = np.array([cell.resources,
-                         len(friendlyResources),
-                         sum(friendlyResources),
-                         0 if len(friendlyResources) == 0 else min(friendlyResources),
-                         0 if len(friendlyResources) == 0 else max(friendlyResources),
-                         len(foeResources),
-                         sum(foeResources),
-                         0 if len(foeResources) == 0 else min(foeResources),
-                         0 if len(foeResources) == 0 else max(foeResources),
-                         len(cell.nones)
-                         ])
-'''
-      0 - Resources
-      1 - Sum of foe neighbouring cell resources
-      2 - Min of foe neighbouring cell resources
-
-    :type world:
-    :return:
-    """
-    inpt = np.zeros(EnvDef.ATTACK_VECTOR_SIZE * EnvDef.MAX_CELL_COUNT)
-    cells = {str(id): world.uberCells[id] for id in world.uberCells}
-    sortedCellNames = sorted(cells)
-    i = 0
-    for name in sortedCellNames:
-      cell = cells[name]
-      friendlyResources = map(lambda x: x.resources, cell.owns)
-      foeResources = map(lambda x: x.resources, cell.enemies)
-      vector = np.array([cell.resources,
-                         sum(friendlyResources),
-                         0 if len(foeResources) == 0 else min(foeResources)
-                         ])
-      inpt[i*EnvDef.ATTACK_VECTOR_SIZE : (i+1) * EnvDef.ATTACK_VECTOR_SIZE] = vector
-      i += 1
-
-    return inpt
-
-  def process_action(self, action):
-    return action  # this is due to a BUG in keras-rl when it tries to calc mean
-
-  def process_observation(self, observation):
-    """
-
-    :type observation: World
-    :return:
-    """
-    return self.buildInput(observation)
 
 
 # ______________________________________________________________________________________________________________________________

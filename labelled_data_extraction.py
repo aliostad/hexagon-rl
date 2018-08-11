@@ -34,16 +34,8 @@ class DummySuperCentaurPlayer(Aliostad):
     fromId = Aliostad.getAttackFromCellId(self, world)
     if fromId is not None:
       vector = self.attack_processor.process_observation(world)
-      cells = {str(id): world.uberCells[id] for id in world.uberCells}
-      sortedCellNames = sorted(cells)
-      index = -1
-      for i in range(0, len(sortedCellNames)):
-        if sortedCellNames[i] == str(fromId):
-          index = i
-          break
-      if index < 0:
-        print('Catastrophe!')
-        raise IndexError()
+      theCell = world.uberCells[fromId]
+      index = self.attack_processor.calculate_hash_index(str(theCell.id))
 
       fileName = '{}/ATTACK_VECTOR_{}_{}.npy'.format(self.folder, r.randint(1, 1000 * 1000 * 1000), index)
       np.save(fileName, vector)
@@ -53,20 +45,20 @@ class DummySuperCentaurPlayer(Aliostad):
 
 class DataExtractionGym:
   def __init__(self, folder):
-    self.players = [
-      Aliostad('random80', 0.8),
-      Aliostad('random60', 0.6),
-      Aliostad('random50', 0.3),
-      Aliostad('Ali-1'),
-      DummySuperCentaurPlayer('dumm1', folder),
-      DummySuperCentaurPlayer('dumm2', folder)
-    ]
     self.game = None
+    self.folder = folder
 
   def start(self, episodes=1000, max_rounds=2000):
-    self.game = Game('my-game', self.players, r.choice([7, 8, 9, 10]))
-    self.game.start()
     for ep in range(0, episodes):
+      players = [
+        Aliostad('random80', 0.8),
+        Aliostad('random60', 0.6),
+        Aliostad('random50', 0.3),
+        Aliostad('Ali-1'),
+        DummySuperCentaurPlayer('dumm1', self.folder),
+        DummySuperCentaurPlayer('dumm2', self.folder)]
+      self.game = Game('my-game', players, r.choice([7, 8, 9, 10]))
+      self.game.start()
       print('episode {}'.format(ep))
       for i in range(0, max_rounds):
         stats, finished = self.game.run_sync()
