@@ -252,7 +252,7 @@ class AttackModel:
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
     model = Sequential()
     model.add(Flatten(input_shape=(1,) + (EnvDef.MAX_CELL_COUNT * EnvDef.ATTACK_VECTOR_SIZE,)))
-    model.add(Dense(EnvDef.ATTACK_ACTION_SPACE, activation="tanh"))
+    #model.add(Dense(EnvDef.ATTACK_ACTION_SPACE, activation="tanh"))
     model.add(Dense(EnvDef.ATTACK_ACTION_SPACE, activation="relu"))
     model.add(Dense(EnvDef.ATTACK_ACTION_SPACE))
     model.add(Activation('softmax'))
