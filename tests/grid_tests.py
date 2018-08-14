@@ -87,6 +87,15 @@ class GridTests(unittest.TestCase):
     self.assertEquals(4, hid.nwes)
     self.assertEquals(-1, hid.x)
 
+  def test_conversion_from_grid_to_hex_correct__3__2(self):
+    # 3, -1
+    gid = GridCellId(-3, -2)
+    hid = gid.to_cell_id()
+    self.assertEquals(-2, hid.nwes)
+    self.assertEquals(-2, hid.x)
+
+# __________________________________________________________________________________________________________________
+
   def test_conversion_from_hex_to_grid_correct_1_1(self):
 
     # 1, 1
@@ -117,3 +126,9 @@ class GridTests(unittest.TestCase):
     self.assertEquals(1, gid.x)
     self.assertEquals(-1, gid.y)
 
+  def test_conversion_from_hex_to_grid_correct__2__2(self):
+    # -2, -2
+    hid = CellId(-2, -2)
+    gid = GridCellId.fromHexCellId(hid)
+    self.assertEquals(-3, gid.x)
+    self.assertEquals(-2, gid.y)
