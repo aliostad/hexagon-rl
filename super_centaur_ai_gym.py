@@ -293,6 +293,8 @@ class AttackModel:
     model.add(Dense(EnvDef.SPATIAL_OUTPUT, activation='softmax'))
     model.compile(loss="categorical_crossentropy",
                   optimizer='adadelta', metrics=['accuracy'])
+    if os.path.exists(self.modelName):
+      model.load_weights(self.modelName)
     self.model = model
 
 # ______________________________________________________________________________________________________________________________
