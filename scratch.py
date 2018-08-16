@@ -4,7 +4,7 @@ from keras.layers.merge import Concatenate
 import numpy as np
 
 INPUT_SIZE = 12
-SEQUENCE_LENGTH = 12
+SEQUENCE_LENGTH = 120
 OUTPUT_SIZE = 2
 SAMPLE_SIZE = 100 * 1000
 
