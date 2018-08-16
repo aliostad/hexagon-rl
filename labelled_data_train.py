@@ -13,9 +13,11 @@ def build_attack_vector(fileName):
   x = np.load(fileName)
   tail, name = os.path.split(fileName)
   fileNameNoExt = name.replace('.npy', '')
-  index = int(fileNameNoExt.split('_')[-1])
-  y = np.zeros(EnvDef.ATTACK_ACTION_SPACE)
-  y[index] = 1
+  splits = fileNameNoExt.split('_')
+  yx = int(splits[-2])
+  yy = int(splits[-1])
+  y = np.zeros(EnvDef.MAX_GRID_LENGTH)
+  y[yx + EnvDef.MAX_GRID_LENGTH/2] = 1
   return x, y
 
 
@@ -70,6 +72,10 @@ if __name__ == '__main__':
     # uses the model expecting another dimension
     Y.append(y)
 
-  model.model.fit(np.array(X),
-                  np.array(Y), batch_size=100, epochs=2000, verbose=1)
+  X = np.array(X)
+  Y = np.array(Y)
+  if sys.argv[1] == 'ATTACK':
+    X = X.reshape(X.shape[0], EnvDef.SPATIAL_INPUT[0], EnvDef.SPATIAL_INPUT[1], EnvDef.SPATIAL_INPUT[2])
+
+  model.model.fit(X, Y , batch_size=100, epochs=200, verbose=1)
   model.model.save(model.modelName)

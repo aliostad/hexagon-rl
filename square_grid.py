@@ -81,3 +81,12 @@ class GridCellId():
 
   def to_cell_id(self):
     return CellId(self.x - (self.y/2), self.y)
+
+  def transpose(self, x0, y0):
+    """
+
+    :type x0: int
+    :type y0: int
+    :return:
+    """
+    return GridCellId(self.x + x0, self.y + y0)

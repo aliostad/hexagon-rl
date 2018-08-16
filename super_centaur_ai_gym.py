@@ -1,15 +1,15 @@
-from keras.layers import Flatten
-from keras.optimizers import Adam
+from keras.layers import Flatten, Conv2D
+from keras.optimizers import Adam, Adagrad
 from rl.agents import DQNAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
-from rl.policy import BoltzmannQPolicy
 
 from centaur import *
 from random import shuffle
 from multi_agent import *
 import sys
 import hexagon_ui_api
-
+import os
+from square_grid import *
 
 # ______________________________________________________________________________________________________________________________
 class EnvDef:
@@ -20,10 +20,10 @@ class EnvDef:
   DECISION_ACTION_SPACE = 2
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
-  MAX_CELL_COUNT = HASH_POOL
-  ATTACK_VECTOR_SIZE = NODE_FEATURE_COUNT
-  ATTACK_ACTION_SPACE = MAX_CELL_COUNT
-
+  CELL_FEATURE = 6
+  MAX_GRID_LENGTH = 33
+  SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH, CELL_FEATURE)
+  SPATIAL_OUTPUT = MAX_GRID_LENGTH
 
 class AgentType:
   BoostDecision = 'BoostDecision'
@@ -59,7 +59,7 @@ class SuperCentaurPlayer(Aliostad):
 
   def getAttackFromCellId(self, world):
     self.was_called[AgentType.Attack] = True
-    index =self.actions[AgentType.Attack]
+    index = self.actions[AgentType.Attack]
     cells = {str(id): world.uberCells[id] for id in world.uberCells}
     sortedCellNames = sorted(cells)
     if len(sortedCellNames) == 0 or len(sortedCellNames) <= index:
@@ -213,8 +213,43 @@ class CentaurDecisionProcessor(Processor):
 
 
 # ______________________________________________________________________________________________________________________________
-class CentaurAttackProcessor(CentaurDecisionProcessor):
-  pass
+class CentaurAttackProcessor(Processor):
+  def buildInput(self, world):
+    """
+    returns a NxN map of the world with hexagon grid transposed to square grid
+
+    :type world:
+    :return:
+    """
+    hector = np.zeros(EnvDef.SPATIAL_INPUT)
+    for cid in world.worldmap:
+      hid = GridCellId.fromHexCellId(cid)
+      thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
+      featureVector = [hid.x,
+                       hid.y,
+                       world.worldmap[cid],
+                       0, 0, 0]
+
+      if cid in world.uberCells:
+        uc = world.uberCells[cid]
+        featureVector[3] = 1 if uc.canAttack else 0
+        featureVector[4] = uc.attackPotential
+        featureVector[5] = uc.boostFactor
+
+      hector[thid.x][thid.y] = np.array(featureVector)
+    return hector
+
+  def process_action(self, action):
+    return action  # this is due to a BUG in keras-rl when it tries to calc mean
+
+  def process_observation(self, observation):
+    """
+
+    :type observation: World
+    :return:
+    """
+    return self.buildInput(observation)
+
 
 
 
@@ -251,16 +286,14 @@ class AttackModel:
     """
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
     model = Sequential()
-    model.add(Flatten(input_shape=(1,) + (EnvDef.MAX_CELL_COUNT * EnvDef.ATTACK_VECTOR_SIZE,)))
-    #model.add(Dense(EnvDef.ATTACK_ACTION_SPACE, activation="tanh"))
-    model.add(Dense(EnvDef.ATTACK_ACTION_SPACE, activation="relu"))
-    model.add(Dense(EnvDef.ATTACK_ACTION_SPACE))
-    model.add(Activation('softmax'))
-    print(model.summary())
+    model.add(Conv2D(64, (3, 3), input_shape=EnvDef.SPATIAL_INPUT))
+    model.add(Flatten())
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT * 16, activation='relu'))
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT * 4, activation='tanh'))
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT, activation='softmax'))
     model.compile(loss="categorical_crossentropy",
-                  optimizer=Adam(lr=0.001), metrics=['categorical_accuracy'])
+                  optimizer='adadelta', metrics=['accuracy'])
     self.model = model
-
 
 # ______________________________________________________________________________________________________________________________
 

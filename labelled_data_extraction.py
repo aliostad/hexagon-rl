@@ -35,9 +35,9 @@ class DummySuperCentaurPlayer(Aliostad):
     if fromId is not None:
       vector = self.attack_processor.process_observation(world)
       theCell = world.uberCells[fromId]
-      index = self.attack_processor.calculate_hash_index(str(theCell.id))
+      hid = GridCellId.fromHexCellId(theCell.id)
 
-      fileName = '{}/ATTACK_VECTOR_{}_{}.npy'.format(self.folder, r.randint(1, 1000 * 1000 * 1000), index)
+      fileName = '{}/ATTACK_VECTOR_{}_{}_{}.npy'.format(self.folder, r.randint(1, 1000 * 1000 * 1000), hid.x, hid.y)
       np.save(fileName, vector)
     return fromId
 

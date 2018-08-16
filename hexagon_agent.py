@@ -111,6 +111,22 @@ class World:
             dic[cid] = 1
     return dic
 
+  @staticmethod
+  def buildWorldmap(cells):
+    """
+
+    :type cells: list of CellInfo
+    :return:
+    """
+    worldmap = {}
+    for c in cells:
+      if c.id not in worldmap:
+        worldmap[c.id] = c.resources
+      for n in c.neighbours:
+        if n.id not in worldmap:
+          worldmap[n.id] = (1 if n.isOwned else -1) * n.resources
+    return worldmap
+
   def buildNonOwnsNeighbourhood(self):
     '''
     build dictionary of how many owned cells around non-owned cells so can be attacked easier
@@ -131,6 +147,7 @@ class World:
 
     :type cells: list of CellInfo
     """
+    self.worldmap = World.buildWorldmap(cells)
     self.cells = {x.id: x for x in cells}
     self.uberCells = {x.id: UberCell(x, self) for x in cells}
     self.resources = sum(self.cells[x].resources for x in self.cells)
