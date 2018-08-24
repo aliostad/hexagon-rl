@@ -1,5 +1,5 @@
-from keras.models import Sequential
-from keras.layers import Conv2D, Lambda
+from keras.models import Sequential, Model
+from keras.layers import Conv2D, Lambda, Input, Flatten
 import numpy as np
 import math
 import sys
@@ -124,7 +124,7 @@ def chuz_top(input):
   :type input: ndarray
   :return:
   """
-  return (K.argmax(input, 0), K.argmax(input, 1))
+  return K.argmax(input, 1)
 
 
 if __name__ == '__main__':
@@ -177,12 +177,20 @@ if __name__ == '__main__':
     for i in range(0, 5):
       print('{} ({}) - {} ({})'.format(sorted_y[i], y_scores[sorted_y[i]], sorted_y_hat[i], y_hat_scores[sorted_y_hat[i]]))
 
-    m2 = build_model()
-    m2.add(Lambda(chuz_top, output_shape=(2,)))
-    if os.path.exists(fname):
-      model.load_weights(fname)
-    model.compile(loss='mean_squared_logarithmic_error', optimizer='adam')
-    vashti = m2.predict(x)
-    print(vashti[0])
+    input_1 = Input(shape=(GRID_SIZE[0], GRID_SIZE[1], 1))
+    conv_1 = Conv2D(128, (3, 3), padding='same', activation='relu')
+    conv_2 = Conv2D(16, (3, 3), padding='same', activation='relu')
+    conv_3 = Conv2D(4, (3, 3), padding='same', activation='relu')
+    conv_4 = Conv2D(1, (1, 1), padding='same', activation='relu')
+    flat_1 = Flatten()
+    lamma = Lambda(chuz_top)
+    stack = conv_1(input_1)
+    stack = conv_2(stack)
+    stack = conv_3(stack)
+    stack = conv_4(stack)
+    stack = flat_1(stack)
+    stack = lamma(stack)
+    m2 = Model(inputs=input_1, outputs=stack)
+    m2.load_weights(fname)
 
-    m2.uses_learning_phase
+    print m2.predict(x)
