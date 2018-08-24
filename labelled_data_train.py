@@ -11,14 +11,8 @@ def build_attack_vector(fileName):
   :return:
   """
   x = np.load(fileName)
-  tail, name = os.path.split(fileName)
-  fileNameNoExt = name.replace('.npy', '')
-  splits = fileNameNoExt.split('_')
-  yx = int(splits[-2])
-  yy = int(splits[-1])
-  y = np.zeros(EnvDef.MAX_GRID_LENGTH)
-  y[yx + EnvDef.MAX_GRID_LENGTH/2] = 1
-  return x, y
+  y = np.load(fileName.replace('_STATE_', '_ACTION_'))
+  return np.reshape(x, EnvDef.SPATIAL_INPUT + (1,)), np.reshape(y, EnvDef.SPATIAL_OUTPUT + (1,))
 
 
 def build_decision_vector(fileName):
@@ -34,8 +28,6 @@ def build_decision_vector(fileName):
   y = np.zeros(EnvDef.DECISION_ACTION_SPACE)
   y[index] = 1
   return x, y
-
-
 
 
 if __name__ == '__main__':
@@ -54,7 +46,7 @@ if __name__ == '__main__':
     model = dec_model
     vectoriser = build_decision_vector
   elif sys.argv[1] == 'ATTACK':
-    pattern = '/ATTACK_VECTOR_*.npy'
+    pattern = '/ATTACK_STATE_*.npy'
     model = attack_model
     vectoriser = build_attack_vector
 
@@ -68,14 +60,11 @@ if __name__ == '__main__':
     if i % 100 == 0:
       print(i)
     x, y = vectoriser(f)
-    X.append(np.array([x]))  # wrapping in another array is due to the way keras-rl ...
-    # uses the model expecting another dimension
+    X.append(x)
     Y.append(y)
 
   X = np.array(X)
   Y = np.array(Y)
-  if sys.argv[1] == 'ATTACK':
-    X = X.reshape(X.shape[0], EnvDef.SPATIAL_INPUT[0], EnvDef.SPATIAL_INPUT[1], EnvDef.SPATIAL_INPUT[2])
 
-  model.model.fit(X, Y , batch_size=100, epochs=200, verbose=1)
+  model.model.fit(X, Y, batch_size=100, epochs=200, verbose=1)
   model.model.save(model.modelName)

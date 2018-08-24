@@ -20,10 +20,10 @@ class EnvDef:
   DECISION_ACTION_SPACE = 2
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
-  CELL_FEATURE = 6
+  CELL_FEATURE = 1
   MAX_GRID_LENGTH = 33
-  SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH, CELL_FEATURE)
-  SPATIAL_OUTPUT = MAX_GRID_LENGTH
+  SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
+  SPATIAL_OUTPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
 
 class AgentType:
   BoostDecision = 'BoostDecision'
@@ -216,27 +216,30 @@ class CentaurDecisionProcessor(Processor):
 class CentaurAttackProcessor(Processor):
   def buildInput(self, world):
     """
-    returns a NxN map of the world with hexagon grid transposed to square grid
+    returns a MxN map of the world with hexagon grid transposed to square grid
 
-    :type world:
+    :type world: World
     :return:
     """
     hector = np.zeros(EnvDef.SPATIAL_INPUT)
     for cid in world.worldmap:
       hid = GridCellId.fromHexCellId(cid)
       thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
-      featureVector = [hid.x,
-                       hid.y,
-                       world.worldmap[cid],
-                       0, 0, 0]
+      hector[thid.x][thid.y] = world.worldmap[cid]
+    return hector
 
-      if cid in world.uberCells:
-        uc = world.uberCells[cid]
-        featureVector[3] = 1 if uc.canAttack else 0
-        featureVector[4] = uc.attackPotential
-        featureVector[5] = uc.boostFactor
+  def buildOutput(self, world):
+    """
+    returns a MxN map of the world with hexagon grid transposed to square grid
 
-      hector[thid.x][thid.y] = np.array(featureVector)
+    :type world: World
+    :return:
+    """
+    hector = np.zeros(EnvDef.SPATIAL_INPUT)
+    for cid in world.uberCells:
+      hid = GridCellId.fromHexCellId(cid)
+      thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
+      hector[thid.x][thid.y] = 0 if not world.uberCells[cid].canAttack else world.uberCells[cid].attackPotential
     return hector
 
   def process_action(self, action):
@@ -285,16 +288,17 @@ class AttackModel:
     :type theMethod: str
     """
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
+
     model = Sequential()
-    model.add(Conv2D(64, (3, 3), input_shape=EnvDef.SPATIAL_INPUT))
-    model.add(Flatten())
-    model.add(Dense(EnvDef.SPATIAL_OUTPUT * 16, activation='relu'))
-    model.add(Dense(EnvDef.SPATIAL_OUTPUT * 4, activation='tanh'))
-    model.add(Dense(EnvDef.SPATIAL_OUTPUT, activation='softmax'))
-    model.compile(loss="categorical_crossentropy",
-                  optimizer='adadelta', metrics=['accuracy'])
+    model.add(Conv2D(128, (3, 3), padding='same', activation='relu', input_shape=EnvDef.SPATIAL_INPUT + (1, )))
+    model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
+    model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
+    model.add(Conv2D(1, (1, 1), padding='same', activation='relu'))
+
     if os.path.exists(self.modelName):
       model.load_weights(self.modelName)
+    model.compile(loss='mean_squared_logarithmic_error', optimizer='adam')
+
     self.model = model
 
 # ______________________________________________________________________________________________________________________________

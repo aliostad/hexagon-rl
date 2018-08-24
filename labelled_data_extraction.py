@@ -31,15 +31,14 @@ class DummySuperCentaurPlayer(Aliostad):
     :type world: World
     :return:
     """
-    fromId = Aliostad.getAttackFromCellId(self, world)
-    if fromId is not None:
-      vector = self.attack_processor.process_observation(world)
-      theCell = world.uberCells[fromId]
-      hid = GridCellId.fromHexCellId(theCell.id)
-
-      fileName = '{}/ATTACK_VECTOR_{}_{}_{}.npy'.format(self.folder, r.randint(1, 1000 * 1000 * 1000), hid.x, hid.y)
-      np.save(fileName, vector)
-    return fromId
+    in_vector = self.attack_processor.buildInput(world)
+    out_vector = self.attack_processor.buildOutput(world)
+    rid = r.randint(1, 1000 * 1000 * 1000)
+    stateFileName = '{}/ATTACK_STATE_{}.npy'.format(self.folder, rid)
+    actionFileName = '{}/ATTACK_ACTION_{}.npy'.format(self.folder, rid)
+    np.save(actionFileName, out_vector)
+    np.save(stateFileName, in_vector)
+    return Aliostad.getAttackFromCellId(self, world)
 
 # ____________________________________________________________________________________________________________________________
 
