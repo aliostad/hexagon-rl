@@ -2,6 +2,7 @@ from keras.layers import Flatten, Conv2D
 from keras.optimizers import Adam, Adagrad
 from rl.agents import DQNAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
+from discrete_spatial_agent import DiscreteSpatial2DAgent
 
 from centaur import *
 from random import shuffle
@@ -10,6 +11,9 @@ import sys
 import hexagon_ui_api
 import os
 from square_grid import *
+import numpy as np
+from numpy.core.multiarray import *
+import copy
 
 # ______________________________________________________________________________________________________________________________
 class EnvDef:
@@ -35,15 +39,19 @@ class AgentType:
 class SuperCentaurPlayer(Aliostad):
   def __init__(self, name):
     Aliostad.__init__(self, name)
-    self._reset_state()
+    self.reset_state()
 
-  def _reset_state(self):
+  def reset_state(self):
     self.actions = {}
     self.current_move = None
     self.was_called = {}
     self.illegal_move_by_agents = {}
 
-  def timeForBoost(self, world):
+  #  just overriding for instrumentation purposes.
+  def turnx(self, world):
+    return Aliostad.turnx(self, world)
+
+  def timeForBoost_xxx(self, world):
     """
 
     :type world: World
@@ -54,20 +62,20 @@ class SuperCentaurPlayer(Aliostad):
 
   def move(self, playerView):
     mv = self.current_move
-    self._reset_state()
     return mv
 
   def getAttackFromCellId(self, world):
     self.was_called[AgentType.Attack] = True
-    index = self.actions[AgentType.Attack]
-    cells = {str(id): world.uberCells[id] for id in world.uberCells}
-    sortedCellNames = sorted(cells)
-    if len(sortedCellNames) == 0 or len(sortedCellNames) <= index:
+    cellId = self.actions[AgentType.Attack]
+    if cellId not in world.uberCells:
       self.illegal_move_by_agents[AgentType.Attack] = True
+      print('illegal move: {}'.format(cellId))
       return None
-    name = sortedCellNames[index]
-    cell = cells[name]
-    return cell.id
+    if not world.uberCells[cellId].canAttack:
+      self.illegal_move_by_agents[AgentType.Attack] = True
+      print('illegal move: {}'.format(cellId))
+      return None
+    return cellId
 
 
 # __________________________________________________________________________________________________________________________
@@ -126,6 +134,7 @@ class HierarchicalCentaurEnv(Env):
     wrld = self.centaur.build_world(playerView.ownedCells)
     self.push_world(wrld)
     rewards = {name: -50 if name in self.centaur.illegal_move_by_agents else reward for name in self.centaur.was_called}
+    self.centaur.reset_state()
     return wrld, rewards, isFinished, {}
 
   def push_world(self, world):
@@ -214,6 +223,10 @@ class CentaurDecisionProcessor(Processor):
 
 # ______________________________________________________________________________________________________________________________
 class CentaurAttackProcessor(Processor):
+  def __init__(self, masking=False):
+    self.masking = masking
+    self.last_world = None
+
   def buildInput(self, world):
     """
     returns a MxN map of the world with hexagon grid transposed to square grid
@@ -221,6 +234,7 @@ class CentaurAttackProcessor(Processor):
     :type world: World
     :return:
     """
+    self.last_world = world
     hector = np.zeros(EnvDef.SPATIAL_INPUT)
     for cid in world.worldmap:
       hid = GridCellId.fromHexCellId(cid)
@@ -243,7 +257,24 @@ class CentaurAttackProcessor(Processor):
     return hector
 
   def process_action(self, action):
-    return action  # this is due to a BUG in keras-rl when it tries to calc mean
+    """
+
+    :type action: ndarray
+    :return:
+    """
+    if self.masking and self.last_world is not None:
+      action = copy.deepcopy(action)
+      for cid in self.last_world.uberCells:
+        if self.last_world.uberCells[cid].canAttack:
+          hid = GridCellId.fromHexCellId(cid)
+          thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
+          action[thid.x][thid.y] += 100 * 1000
+    flat = action.flatten()
+    idx = np.argmax(flat, 0)
+    y = idx % action.shape[1]
+    x = idx / action.shape[1]
+    thid = GridCellId(x, y).transpose(-(EnvDef.SPATIAL_INPUT[0] / 2), -(EnvDef.SPATIAL_INPUT[1] / 2))
+    return thid.to_cell_id()
 
   def process_observation(self, observation):
     """
@@ -301,6 +332,41 @@ class AttackModel:
 
     self.model = model
 
+  @staticmethod
+  def prepare_x(X, batch=False):
+    """
+
+    :type X: ndarray
+    :type batch: bool
+    :return:
+    """
+    shape = EnvDef.SPATIAL_INPUT + (1, )
+    if batch:
+      shape = (X.shape[0], ) + shape
+    return np.reshape(X, shape)
+
+  @staticmethod
+  def prepare_y(Y, batch=False):
+    """
+
+    :type Y: ndarray
+    :type batch: bool
+    :return:
+    """
+    shape = EnvDef.SPATIAL_OUTPUT + (1, )
+    if batch:
+      shape = (Y.shape[0], ) + shape
+    return np.reshape(Y, shape)
+
+  @staticmethod
+  def process_y(Y):
+    """
+
+    :type Y: ndarray
+    :return:
+    """
+    return np.reshape(Y, EnvDef.SPATIAL_OUTPUT)
+
 # ______________________________________________________________________________________________________________________________
 
 
@@ -315,18 +381,17 @@ if __name__ == '__main__':
 
   prc = CentaurDecisionProcessor()
   dec_model = DecisionModel()
-  attack_model = AttackModel()
+  attack_model = AttackModel('Attack_model_params.h5f')
 
   prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor()})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
   decision_agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
-                   batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
+                            batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
 
   decision_agent.compile()
   memory2 = EpisodeParameterMemory(limit=1000, window_length=1)
-  attack_agent = CEMAgent(model=attack_model.model, nb_actions=EnvDef.ATTACK_ACTION_SPACE, memory=memory2,
-                   batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
-  attack_agent.compile()
+  attack_agent = DiscreteSpatial2DAgent(attack_model.model, x_preparation=AttackModel.prepare_x,
+                                        y_preparation=AttackModel.prepare_y, y_processing=AttackModel.process_y)
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc)
 
@@ -334,7 +399,7 @@ if __name__ == '__main__':
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif sys.argv[1] == 'train':
-    agent.fit(env, nb_steps=300 * 1000, visualize=False, verbose=2)
+    agent.fit(env, nb_steps=300 * 1000, visualize=False, verbose=2, interim_filenames={AgentType.Attack: attack_model.modelName})
     agent.save_weights({AgentType.BoostDecision: dec_model.modelName, AgentType.Attack: attack_model.modelName}, overwrite=True)
   elif sys.argv[1] == 'test':
     agent.test(env, nb_episodes=100)

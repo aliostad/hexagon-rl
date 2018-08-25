@@ -26,22 +26,11 @@ class DiscreteSpatial2DAgent(Agent):
   def __init__(self, model, processor=None, memory=None, train_interval=100,
                batch_size=100, reward_accumulation_steps=10, random_exploration=0.1,
                random_variance=0.5, x_preparation=None, y_preparation=None,
-               y_processing=None):
-    """
-
-    :param model:
-    :param processor:
-    :param memory:
-    :param train_interval:
-    :param batch_size:
-    :param reward_cumulation_steps:
-    :param random_exploration:
-    :param random_variance:
-    """
+               y_processing=None, memory_length=10000, warmup_period=99, **kwargs):
     Agent.__init__(self, processor=processor)
 
     self.model = model
-    self.memory = SequentialMemory(10000) if memory is None else memory
+    self.memory = SequentialMemory(memory_length, window_length=1) if memory is None else memory
     self.train_interval = train_interval
     self.batch_size = batch_size
     self.reward_accumulation_steps = reward_accumulation_steps
@@ -50,6 +39,7 @@ class DiscreteSpatial2DAgent(Agent):
     self.x_preparation = x_preparation
     self.y_preparation = y_preparation
     self.y_processing = y_processing
+    self.warmup_period = warmup_period
     self._reset()
 
     # defaults
@@ -64,7 +54,8 @@ class DiscreteSpatial2DAgent(Agent):
     :return:
     """
     # find max
-    oldMax = max(state.flatten())
+    flat = state.flatten()
+    oldMax = max(flat)
     idx = np.argmax(flat, 0)
     x = idx % state.shape[1]
     y = idx / state.shape[1]
@@ -76,7 +67,7 @@ class DiscreteSpatial2DAgent(Agent):
   def select_action(self, state):
     X = np.array(state)
     if self.x_preparation is not None:
-      X = self.x_preparation(X)
+      X = self.x_preparation(X, batch=False)
     Y = self.model.predict(np.array([X]))[0]
     if self.y_processing is not None:
       Y = self.y_processing(Y)
@@ -99,7 +90,7 @@ class DiscreteSpatial2DAgent(Agent):
     if bottom is not None:
       bottom_state, bottom_action = bottom
       n_positives = len(filter(lambda r: r > 0, self.recent_rewards))
-      if n_positives > len(reward) - n_positives:  # if it has been generally more positive than negative or 0
+      if n_positives > len(self.recent_rewards) - n_positives:  # if it has been generally more positive than negative or 0
         self.memory.append(bottom_state, bottom_action, sum(self.recent_rewards), False, self.training)
 
     if terminal:
@@ -107,17 +98,19 @@ class DiscreteSpatial2DAgent(Agent):
       for idx, (state, action) in enumerate(self.not_committed_states):
         rewards = self.recent_rewards[idx:]
         n_positives = len(filter(lambda r: r > 0, rewards))
-        if n_positives < len(reward) - n_positives:
+        if n_positives < len(self.recent_rewards) - n_positives:
           state = self._next_best_state(state)
         self.memory.append(state, action, sum(rewards), True if idx == self.reward_accumulation_steps - 1 else False,
                            self.training)
 
       self._reset()
 
-    if self.training and self.step % self.train_interval == 0:
+    if self.training and self.step % self.train_interval == 0 and self.step > self.warmup_period:
       self.train()
+    return {}
 
   def train(self):
+    print('training ...')
     X = []
     Y = []
     experiences = self.memory.sample(self.batch_size)
@@ -127,10 +120,9 @@ class DiscreteSpatial2DAgent(Agent):
     X = np.array(X)
     Y = np.array(Y)
     if self.x_preparation is not None:
-      X = self.x_preparation(X)
+      X = self.x_preparation(X, batch=True)
     if self.y_preparation is not None:
-      Y = self.y_preparation(Y)
-    self.model = keras.Model()
+      Y = self.y_preparation(Y, batch=True)
     self.model.train_on_batch(X, Y)
 
   def compile(self, optimizer, metrics=[]):

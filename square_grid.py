@@ -58,7 +58,6 @@ from hexagon import *
 import math
 
 
-
 class GridCellId():
 
   def __init__(self, x, y):

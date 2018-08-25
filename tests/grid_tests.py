@@ -54,7 +54,7 @@
 import unittest
 from square_grid import *
 from hexagon import *
-
+import numpy as np
 
 
 class GridTests(unittest.TestCase):
@@ -132,3 +132,14 @@ class GridTests(unittest.TestCase):
     gid = GridCellId.fromHexCellId(hid)
     self.assertEquals(-3, gid.x)
     self.assertEquals(-2, gid.y)
+
+  def test_conversion_to_and_fro(self):
+
+    for _ in range(0, 200):
+      x = np.random.randint(-150, 150)
+      nwes = np.random.randint(-150, 150)
+      cellId = CellId(nwes, x)
+      gid = GridCellId.fromHexCellId(cellId)
+      again = gid.to_cell_id()
+
+      self.assertEqual(cellId, again)
