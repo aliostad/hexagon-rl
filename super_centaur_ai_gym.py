@@ -228,7 +228,7 @@ class CentaurDecisionProcessor(Processor):
 
 # ______________________________________________________________________________________________________________________________
 class CentaurAttackProcessor(Processor):
-  def __init__(self, masking=False):
+  def __init__(self, masking=True):
     self.masking = masking
     self.last_world = None
 
