@@ -26,7 +26,8 @@ class DiscreteSpatial2DAgent(Agent):
   def __init__(self, model, processor=None, memory=None, train_interval=100,
                batch_size=100, reward_accumulation_steps=10, random_exploration=0.1,
                random_variance=0.5, x_preparation=None, y_preparation=None,
-               y_processing=None, memory_length=10000, warmup_period=199, **kwargs):
+               y_processing=None, memory_length=10000, warmup_period=199,
+               bad_input_mutation_proportion=0.1, **kwargs):
     Agent.__init__(self, processor=processor)
 
     self.model = model
@@ -40,6 +41,7 @@ class DiscreteSpatial2DAgent(Agent):
     self.y_preparation = y_preparation
     self.y_processing = y_processing
     self.warmup_period = warmup_period
+    self.bad_input_mutation_proportion = bad_input_mutation_proportion
     self._reset()
 
     # defaults
@@ -92,6 +94,8 @@ class DiscreteSpatial2DAgent(Agent):
       n_positives = len(filter(lambda r: r > 0, self.recent_rewards))
       if n_positives > len(self.recent_rewards) - n_positives:  # if it has been generally more positive than negative or 0
         self.memory.append(bottom_state, bottom_action, sum(self.recent_rewards), False, self.training)
+      elif np.random.uniform() < self.bad_input_mutation_proportion:
+        self.memory.append(self._next_best_state(bottom_state), bottom_action, sum(self.recent_rewards), False, self.training)
 
     if terminal:
       # finalise the states

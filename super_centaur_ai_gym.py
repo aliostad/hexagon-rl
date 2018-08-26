@@ -51,14 +51,15 @@ class SuperCentaurPlayer(Aliostad):
   def turnx(self, world):
     return Aliostad.turnx(self, world)
 
-  def timeForBoost_xxx(self, world):
+  def timeForBoost(self, world):
     """
 
     :type world: World
     :return:
     """
-    self.was_called[AgentType.BoostDecision] = True
-    return self.actions[AgentType.BoostDecision] == 1
+    #self.was_called[AgentType.BoostDecision] = True
+    #return self.actions[AgentType.BoostDecision] == 1
+    return np.random.uniform() < 0.23
 
   def move(self, playerView):
     mv = self.current_move
