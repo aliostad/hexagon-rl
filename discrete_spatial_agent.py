@@ -26,7 +26,7 @@ class DiscreteSpatial2DAgent(Agent):
   def __init__(self, model, processor=None, memory=None, train_interval=100,
                batch_size=100, reward_accumulation_steps=10, random_exploration=0.1,
                random_variance=0.5, x_preparation=None, y_preparation=None,
-               y_processing=None, memory_length=10000, warmup_period=99, **kwargs):
+               y_processing=None, memory_length=10000, warmup_period=199, **kwargs):
     Agent.__init__(self, processor=processor)
 
     self.model = model

@@ -89,6 +89,7 @@ class HierarchicalCentaurEnv(Env):
     self.resources = 100
     self.world = None
     self.leaderBoard = {}
+    self.cellLeaderBoard = {}
     self.shortMemory = []
 
   def configure(self, *args, **kwargs):
@@ -125,10 +126,13 @@ class HierarchicalCentaurEnv(Env):
       else:
         self.leaderBoard[winner.playerName] = 1
       for stat in stats:
+        if stat.playerName not in self.cellLeaderBoard:
+          self.cellLeaderBoard[stat.playerName] = 0
+        self.cellLeaderBoard[stat.playerName] += stat.cellsOwned
         print('{} {} ({})'.format(stat.playerName, stat.cellsOwned, stat.totalResources))
 
       for name in self.leaderBoard:
-        print(' - {}: {}'.format(name, self.leaderBoard[name]))
+        print(' - {}: {} ({})'.format(name, self.leaderBoard[name], self.cellLeaderBoard[name]))
 
     playerView = PlayerView(self.game.round_no, info)
     wrld = self.centaur.build_world(playerView.ownedCells)
