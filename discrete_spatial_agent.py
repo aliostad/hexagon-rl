@@ -16,6 +16,7 @@ from rl.memory import SequentialMemory
 from short_memory import ShortMemory
 import numpy as np
 import keras
+from copy import deepcopy
 
 class DiscreteSpatial2DAgent(Agent):
 
@@ -26,8 +27,8 @@ class DiscreteSpatial2DAgent(Agent):
   def __init__(self, model, processor=None, memory=None, train_interval=100,
                batch_size=100, reward_accumulation_steps=10, random_exploration=0.1,
                random_variance=0.5, x_preparation=None, y_preparation=None,
-               y_processing=None, memory_length=10000, warmup_period=199,
-               bad_input_mutation_proportion=0., **kwargs):
+               y_processing=None, memory_length=1000, warmup_period=199,
+               bad_input_mutation_proportion=0., reward_decay=0.95, **kwargs):
     Agent.__init__(self, processor=processor)
 
     self.model = model
@@ -42,6 +43,7 @@ class DiscreteSpatial2DAgent(Agent):
     self.y_processing = y_processing
     self.warmup_period = warmup_period
     self.bad_input_mutation_proportion = bad_input_mutation_proportion
+    self.reward_decay = reward_decay
     self._reset()
 
     # defaults
@@ -86,13 +88,19 @@ class DiscreteSpatial2DAgent(Agent):
     self.current_action = self.select_action(observation)
     return self.current_action
 
+  def _get_cumul_rewards(self):
+    n = len(self.recent_rewards)
+    rews = [1 if self.recent_rewards[i] > 0 else -1 for i in range(0, n)]
+    decayed_rews = [x * pow(self.reward_decay, n-i) for i, x in enumerate(rews)]
+    return sum(decayed_rews)
+
   def backward(self, reward, terminal):
     self.recent_rewards.append(reward)
     bottom = self.not_committed_states.append((self.current_state, self.current_action))
     if bottom is not None:
       bottom_state, bottom_action = bottom
-      n_positives = len(filter(lambda r: r > 0, self.recent_rewards))
-      if n_positives > len(self.recent_rewards) - n_positives:  # if it has been generally more positive than negative or 0
+      cumul_rewards = self._get_cumul_rewards()
+      if cumul_rewards > 0:
         self.memory.append(bottom_state, bottom_action, sum(self.recent_rewards), False, self.training)
       elif np.random.uniform() < self.bad_input_mutation_proportion:
         self.memory.append(self._next_best_state(bottom_state), bottom_action, sum(self.recent_rewards), False, self.training)
