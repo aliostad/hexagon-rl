@@ -288,6 +288,9 @@ class CentaurAttackProcessor(Processor):
           hid = GridCellId.fromHexCellId(cid)
           thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
           mask[thid.x][thid.y] = 1
+      minimum = min(Y.flatten())
+      if minimum < 0:  # rescale to zero
+        Y += -minimum
       Y = Y * mask
     return Y
 
