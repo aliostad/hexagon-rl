@@ -72,7 +72,7 @@ class SuperCentaurPlayer(Aliostad):
       self.illegal_move_by_agents[AgentType.Attack] = True
       print('illegal move: {}'.format(cellId))
       return None
-    if not world.uberCells[cellId].canAttack:
+    if not world.uberCells[cellId].canAttackOrExpand:
       self.illegal_move_by_agents[AgentType.Attack] = True
       print('illegal move: {}'.format(cellId))
       return None
@@ -258,7 +258,7 @@ class CentaurAttackProcessor(Processor):
     for cid in world.uberCells:
       hid = GridCellId.fromHexCellId(cid)
       thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
-      hector[thid.x][thid.y] = 0 if not world.uberCells[cid].canAttack else world.uberCells[cid].attackPotential
+      hector[thid.x][thid.y] = 0 if not world.uberCells[cid].canAttackOrExpand else world.uberCells[cid].attackPotential
     return hector
 
   def process_action(self, action):
@@ -280,19 +280,22 @@ class CentaurAttackProcessor(Processor):
     :type Y: ndarray
     :return:
     """
-    Y = AttackModel.process_y(Y)
+    shibo = AttackModel.process_y(Y)
+    real_shibo = shibo
     if self.masking and self.last_world is not None:
-      mask = np.zeros(Y.shape)
+      mask = np.zeros(shibo.shape)
       for cid in self.last_world.uberCells:
-        if self.last_world.uberCells[cid].canAttack:
+        if self.last_world.uberCells[cid].canAttackOrExpand:
           hid = GridCellId.fromHexCellId(cid)
           thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
           mask[thid.x][thid.y] = 1
       minimum = min(Y.flatten())
       if minimum < 0:  # rescale to zero
-        Y += -minimum
-      Y = Y * mask
-    return Y
+        shibo += -minimum
+      real_shibo = shibo * mask
+    if max(real_shibo.flat) == 0:
+      print('waaa??')
+    return real_shibo
 
   def process_observation(self, observation):
     """
@@ -314,15 +317,18 @@ class CentaurBoostProcessor(CentaurAttackProcessor):
     :type Y: ndarray
     :return:
     """
-    Y = AttackModel.process_y(Y)
+    shibo = AttackModel.process_y(Y)
+    real_shibo = shibo
     if self.masking and self.last_world is not None:
       mask = np.zeros(Y.shape)
       for cid in self.last_world.uberCells:
         hid = GridCellId.fromHexCellId(cid)
         thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
         mask[thid.x][thid.y] = 1
-      Y = Y * mask
-    return Y
+      real_shibo = shibo * mask
+      if max(real_shibo.flatten()) == 0:
+        print('what??')
+    return real_shibo
 # ______________________________________________________________________________________________________________________________
 
 

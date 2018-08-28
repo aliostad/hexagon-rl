@@ -76,6 +76,7 @@ class UberCell:
                            math.log(sum([n.resources for n in self.enemies], 1) + 1, 5)
     self.hasEnemyNeighbours = any(self.enemies)
     self.canAttack = any(filter(lambda x: x.resources < self.resources + 2, self.enemies))
+    self.canAttackOrExpand = any(filter(lambda x: x.resources < self.resources + 2, self.noneOwns))
     self.canAcceptTransfer = len(self.owns) > 0  # don't send to islands, no point (could be?)
     self.depth = 0
 
