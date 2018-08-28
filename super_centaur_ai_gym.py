@@ -267,19 +267,29 @@ class CentaurAttackProcessor(Processor):
     :type action: ndarray
     :return:
     """
-    if self.masking and self.last_world is not None:
-      action = copy.deepcopy(action)
-      for cid in self.last_world.uberCells:
-        if self.last_world.uberCells[cid].canAttack:
-          hid = GridCellId.fromHexCellId(cid)
-          thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
-          action[thid.x][thid.y] += 100 * 1000
     flat = action.flatten()
     idx = np.argmax(flat, 0)
     y = idx % action.shape[1]
     x = idx / action.shape[1]
     thid = GridCellId(x, y).transpose(-(EnvDef.SPATIAL_INPUT[0] / 2), -(EnvDef.SPATIAL_INPUT[1] / 2))
     return thid.to_cell_id()
+
+  def process_and_mask(self, Y):
+    """
+
+    :type Y: ndarray
+    :return:
+    """
+    Y = AttackModel.process_y(Y)
+    if self.masking and self.last_world is not None:
+      mask = np.zeros(Y.shape)
+      for cid in self.last_world.uberCells:
+        if self.last_world.uberCells[cid].canAttack:
+          hid = GridCellId.fromHexCellId(cid)
+          thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
+          mask[thid.x][thid.y] = 1
+      Y = Y * mask
+    return Y
 
   def process_observation(self, observation):
     """
@@ -290,8 +300,26 @@ class CentaurAttackProcessor(Processor):
     return self.buildInput(observation)
 
 
+class CentaurBoostProcessor(CentaurAttackProcessor):
 
+  def __init__(self, masking=True):
+    CentaurAttackProcessor.__init__(self, masking)
 
+  def process_and_mask(self, Y):
+    """
+
+    :type Y: ndarray
+    :return:
+    """
+    Y = AttackModel.process_y(Y)
+    if self.masking and self.last_world is not None:
+      mask = np.zeros(Y.shape)
+      for cid in self.last_world.uberCells:
+        hid = GridCellId.fromHexCellId(cid)
+        thid = hid.transpose(EnvDef.SPATIAL_INPUT[0] / 2, EnvDef.SPATIAL_INPUT[1] / 2)
+        mask[thid.x][thid.y] = 1
+      Y = Y * mask
+    return Y
 # ______________________________________________________________________________________________________________________________
 
 
@@ -396,7 +424,9 @@ if __name__ == '__main__':
   decision_agent.compile()
   memory2 = EpisodeParameterMemory(limit=1000, window_length=1)
   attack_agent = DiscreteSpatial2DAgent(attack_model.model, x_preparation=AttackModel.prepare_x,
-                                        y_preparation=AttackModel.prepare_y, y_processing=AttackModel.process_y)
+                                        y_preparation=AttackModel.prepare_y,
+                                        y_processing=
+                                        prc.inner_processors[AgentType.Attack].process_and_mask)
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc)
 
