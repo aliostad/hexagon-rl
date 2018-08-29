@@ -271,6 +271,8 @@ class CentaurAttackProcessor(Processor):
     idx = np.argmax(flat, 0)
     y = idx % action.shape[1]
     x = idx / action.shape[1]
+    if idx == 0:
+      print('zero!')
     thid = GridCellId(x, y).transpose(-(EnvDef.SPATIAL_INPUT[0] / 2), -(EnvDef.SPATIAL_INPUT[1] / 2))
     return thid.to_cell_id()
 
@@ -284,8 +286,8 @@ class CentaurAttackProcessor(Processor):
     """
     shp = arr.shape
     flat = arr.flatten()
-    noisy = [value * np.random.uniform(1. - noise_range, 1. + noise_range) for value in flat]
-    return flat.reshape(shp)
+    noisy = np.array([value * np.random.uniform(1. - noise_range, 1. + noise_range) for value in flat])
+    return noisy.reshape(shp)
 
   def process_and_mask(self, Y):
     """
@@ -309,6 +311,9 @@ class CentaurAttackProcessor(Processor):
       if minimum < 0:  # rescale to zero
         shibo += -minimum
       real_shibo = shibo * mask
+      if sum(real_shibo.flat) == 0:
+        print('all zero output after masking')
+        return self.add_noise(self.buildOutput(self.last_world))
     return real_shibo
 
   def process_observation(self, observation):
