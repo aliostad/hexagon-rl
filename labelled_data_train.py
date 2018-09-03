@@ -1,5 +1,5 @@
 import numpy as np
-from super_centaur_ai_gym import *
+from dqn_centaur_ai_gym import *
 import os
 import glob
 
@@ -12,7 +12,7 @@ def build_attack_vector(fileName):
   """
   x = np.load(fileName)
   y = np.load(fileName.replace('_STATE_', '_ACTION_'))
-  return np.reshape(x, EnvDef.SPATIAL_INPUT + (1,)), np.reshape(y, EnvDef.SPATIAL_OUTPUT + (1,))
+  return np.reshape(x, EnvDef.SPATIAL_INPUT + (1,)), np.reshape(y.flatten(), EnvDef.SPATIAL_OUTPUT)
 
 
 def build_decision_vector(fileName):

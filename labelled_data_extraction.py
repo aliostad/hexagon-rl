@@ -1,4 +1,4 @@
-from super_centaur_ai_gym import *
+from dqn_centaur_ai_gym import *
 from hexagon_gaming import *
 import hexagon_ui_api
 from random import Random

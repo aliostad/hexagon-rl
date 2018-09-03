@@ -26,7 +26,7 @@ class EnvDef:
   CELL_FEATURE = 1
   MAX_GRID_LENGTH = 33
   SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
-  SPATIAL_OUTPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
+  SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
 
 class AgentType:
   BoostDecision = 'BoostDecision'
@@ -384,11 +384,13 @@ class AttackModel:
     model.add(Conv2D(128, (3, 3), padding='same', activation='relu', input_shape=EnvDef.SPATIAL_INPUT + (1, )))
     model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(1, (1, 1), padding='same', activation='relu'))
+    model.add(Flatten())
+    model.add(Dense(4*EnvDef.SPATIAL_OUTPUT[0], activation='relu'))
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='softmax'))
 
     if os.path.exists(self.modelName):
       model.load_weights(self.modelName)
-    model.compile(loss='mean_squared_logarithmic_error', optimizer='adam')
+    model.compile(loss='categorical_crossentropy', optimizer='adam')
 
     self.model = model
 
