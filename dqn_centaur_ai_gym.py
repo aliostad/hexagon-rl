@@ -2,6 +2,7 @@ from keras.layers import Flatten, Conv2D
 from rl.agents import DQNAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
 from discrete_spatial_agent import DiscreteSpatial2DAgent
+from keras.models import Model, Input
 
 from centaur import *
 from random import shuffle
@@ -428,6 +429,30 @@ class AttackModel:
     :return:
     """
     return np.reshape(Y, EnvDef.SPATIAL_OUTPUT)
+
+class DiscreteAttackModel:
+  def __init__(self, modelName=None):
+    """
+
+    :type theMethod: str
+    """
+    self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
+
+    inp = Input(EnvDef.SPATIAL_INPUT + (1, ))
+    layer = Conv2D(128, (3, 3), padding='same', activation='relu')(inp)
+    layer = Conv2D(16, (3, 3), padding='same', activation='relu')(layer)
+    layer = Conv2D(4, (3, 3), padding='same', activation='relu')(layer)
+    layer = Flatten()(layer)
+    layer = Dense(4*EnvDef.SPATIAL_OUTPUT[0], activation='relu')(layer)
+    outputX = Dense(EnvDef.MAX_GRID_LENGTH, activation='softmax')(layer)
+    outputY = Dense(EnvDef.MAX_GRID_LENGTH, activation='softmax')(layer)
+
+    model = Model(inp, [outputX, outputY])
+    if os.path.exists(self.modelName):
+      model.load_weights(self.modelName)
+    model.compile(loss='categorical_crossentropy', optimizer='adam')
+
+    self.model = model
 
 # ______________________________________________________________________________________________________________________________
 

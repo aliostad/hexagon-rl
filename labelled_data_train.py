@@ -3,6 +3,10 @@ from dqn_centaur_ai_gym import *
 import os
 import glob
 
+def one_hot_vector(idx, length):
+  a = np.zeros(length)
+  a[idx] = 1.
+  return a
 
 def build_attack_vector(fileName):
   """
@@ -12,7 +16,14 @@ def build_attack_vector(fileName):
   """
   x = np.load(fileName)
   y = np.load(fileName.replace('_STATE_', '_ACTION_'))
-  return np.reshape(x, EnvDef.SPATIAL_INPUT + (1,)), np.reshape(y.flatten(), EnvDef.SPATIAL_OUTPUT)
+  y = np.reshape(y.flatten(), EnvDef.SPATIAL_OUTPUT)
+  idx = np.argmax(y.flat)
+  _y = idx % EnvDef.MAX_GRID_LENGTH
+  _x = idx / EnvDef.MAX_GRID_LENGTH
+  return np.reshape(x, EnvDef.SPATIAL_INPUT + (1,)), \
+         [one_hot_vector(_x, EnvDef.MAX_GRID_LENGTH),
+          one_hot_vector(_y, EnvDef.MAX_GRID_LENGTH)]
+
 
 
 def build_decision_vector(fileName):
@@ -33,7 +44,7 @@ def build_decision_vector(fileName):
 if __name__ == '__main__':
 
   dec_model = DecisionModel()
-  attack_model = AttackModel()
+  attack_model = DiscreteAttackModel()
   pattern = None
   vectoriser = None
   model = None
@@ -54,6 +65,8 @@ if __name__ == '__main__':
 
   X = []
   Y = []
+  Y_x = []
+  Y_y = []
   i = 0
   for f in glob.glob(folder + pattern):
     i += 1
@@ -62,9 +75,16 @@ if __name__ == '__main__':
     x, y = vectoriser(f)
     X.append(x)
     Y.append(y)
+    if len(y) == 2:
+      Y_x.append(y[0])
+      Y_y.append(y[1])
 
   X = np.array(X)
   Y = np.array(Y)
+  Y_x = np.array(Y_x)
+  Y_y = np.array(Y_y)
+  if len(Y_x) > 0:
+    Y = [Y_x, Y_y]
 
   model.model.fit(X, Y, batch_size=100, epochs=200, verbose=1)
   model.model.save(model.modelName)
