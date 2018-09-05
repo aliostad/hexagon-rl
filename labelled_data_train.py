@@ -8,7 +8,7 @@ def one_hot_vector(idx, length):
   a[idx] = 1.
   return a
 
-def build_attack_vector(fileName):
+def build_attack_vector(fileName, discrete=False):
   """
 
   :type fileName: str
@@ -18,6 +18,8 @@ def build_attack_vector(fileName):
   y = np.load(fileName.replace('_STATE_', '_ACTION_'))
   y = np.reshape(y.flatten(), EnvDef.SPATIAL_OUTPUT)
   idx = np.argmax(y.flat)
+  if not discrete:
+    return one_hot_vector(idx, EnvDef.SPATIAL_OUTPUT[0])
   _y = idx % EnvDef.MAX_GRID_LENGTH
   _x = idx / EnvDef.MAX_GRID_LENGTH
   return np.reshape(x, EnvDef.SPATIAL_INPUT + (1,)), \
