@@ -44,7 +44,7 @@ def build_decision_vector(fileName):
 if __name__ == '__main__':
 
   dec_model = DecisionModel()
-  attack_model = DiscreteAttackModel()
+  attack_model = AttackModel()
   pattern = None
   vectoriser = None
   model = None

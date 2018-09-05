@@ -167,8 +167,7 @@ if __name__ == '__main__':
       for i in range(0, GRID_SIZE[1]):
         y_hat_scores[Point(i, j)] = round(y_hat[i][j])
         y_scores[Point(i, j)] = round(y[i][j])
-        print '{} ({}|{})\t'.format(round(xxx[i][j]), round(y[i][j]), round(y_hat[i][j])),
-      print('')
+        print('{} ({}|{})\t'.format(round(xxx[i][j]), round(y[i][j]), round(y_hat[i][j])))
 
     sorted_y_hat = sorted(y_hat_scores, key=lambda p: y_hat_scores[p], reverse=True)
     sorted_y = sorted(y_scores, key=lambda p: y_scores[p], reverse=True)
@@ -177,6 +176,7 @@ if __name__ == '__main__':
     for i in range(0, 5):
       print('{} ({}) - {} ({})'.format(sorted_y[i], y_scores[sorted_y[i]], sorted_y_hat[i], y_hat_scores[sorted_y_hat[i]]))
 
+'''
     input_1 = Input(shape=(GRID_SIZE[0], GRID_SIZE[1], 1))
     conv_1 = Conv2D(128, (3, 3), padding='same', activation='relu')
     conv_2 = Conv2D(16, (3, 3), padding='same', activation='relu')
@@ -194,3 +194,4 @@ if __name__ == '__main__':
     m2.load_weights(fname)
 
     print m2.predict(x)
+'''
