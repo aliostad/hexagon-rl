@@ -1,6 +1,9 @@
 from keras.layers import Flatten, Conv2D
+from keras.optimizers import Adam
 from rl.agents import DQNAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
+from rl.policy import BoltzmannQPolicy
+
 from discrete_spatial_agent import DiscreteSpatial2DAgent
 from keras.models import Model, Input
 
@@ -261,7 +264,7 @@ class CentaurAttackProcessor(Processor):
       hector[thid.x][thid.y] = 0 if not world.uberCells[cid].canAttackOrExpand else world.uberCells[cid].attackPotential
     return hector
 
-  def process_action(self, action):
+  def process_action_old(self, action):
     """
 
     :type action: ndarray
@@ -271,6 +274,20 @@ class CentaurAttackProcessor(Processor):
     idx = np.argmax(flat, 0)
     y = idx % action.shape[1]
     x = idx / action.shape[1]
+    if idx == 0:
+      print('zero!')
+    thid = GridCellId(x, y).transpose(-(EnvDef.SPATIAL_INPUT[0] / 2), -(EnvDef.SPATIAL_INPUT[1] / 2))
+    return thid.to_cell_id()
+
+  def process_action(self, action):
+    """
+
+    :type action: int
+    :return:
+    """
+    idx = action
+    y = idx % EnvDef.SPATIAL_INPUT[1]
+    x = idx / EnvDef.SPATIAL_INPUT[1]
     if idx == 0:
       print('zero!')
     thid = GridCellId(x, y).transpose(-(EnvDef.SPATIAL_INPUT[0] / 2), -(EnvDef.SPATIAL_INPUT[1] / 2))
@@ -322,7 +339,15 @@ class CentaurAttackProcessor(Processor):
     :type observation: World
     :return:
     """
-    return self.buildInput(observation)
+    return np.reshape(self.buildInput(observation), EnvDef.SPATIAL_INPUT + (1, ))
+
+  def process_state_batch(self, batch):
+    """
+
+    :type batch: ndarray
+    :return:
+    """
+    return np.reshape(batch, (batch.shape[0], ) + EnvDef.SPATIAL_INPUT + (1, ))
 
 
 class CentaurBoostProcessor(CentaurAttackProcessor):
@@ -382,7 +407,8 @@ class AttackModel:
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
 
     model = Sequential()
-    model.add(Conv2D(128, (3, 3), padding='same', activation='relu', input_shape=EnvDef.SPATIAL_INPUT + (1, )))
+    model.add(Conv2D(128, (3, 3), padding='same', activation='relu',
+              input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
     model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
     model.add(Flatten())
@@ -476,13 +502,18 @@ if __name__ == '__main__':
                             batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
 
   decision_agent.compile()
-  memory2 = EpisodeParameterMemory(limit=1000, window_length=1)
-  attack_agent = DiscreteSpatial2DAgent(attack_model.model, x_preparation=AttackModel.prepare_x,
-                                        y_preparation=AttackModel.prepare_y,
-                                        y_processing=
-                                        prc.inner_processors[AgentType.Attack].process_and_mask)
+  memory2 = SequentialMemory(limit=10000, window_length=1)
+  policy = BoltzmannQPolicy()
+  attack_agent = DQNAgent(attack_model.model,
+                          policy=policy, batch_size=16,
+                          processor=prc.inner_processors[AgentType.Attack],
+                          nb_actions=EnvDef.SPATIAL_OUTPUT[0],
+                          memory=memory2, nb_steps_warmup=500,
+                          enable_dueling_network=True, dueling_type='avg')
+
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc)
+  agent.inner_agents[AgentType.Attack].compile(Adam(lr=1e-3), metrics=['mae'])
 
   hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
