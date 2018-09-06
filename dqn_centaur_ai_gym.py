@@ -73,12 +73,13 @@ class SuperCentaurPlayer(Aliostad):
     cellId = self.actions[AgentType.Attack]
     if cellId not in world.uberCells:
       self.illegal_move_by_agents[AgentType.Attack] = True
-      print('illegal move: {}'.format(cellId))
+      print('illegal move (dont own): {}'.format(cellId))
       return None
     if not world.uberCells[cellId].canAttackOrExpand:
       self.illegal_move_by_agents[AgentType.Attack] = True
-      print('illegal move: {}'.format(cellId))
+      print('illegal move (cant attack): {}'.format(cellId))
       return None
+    print ('legal!!')
     return cellId
 
 
@@ -413,11 +414,11 @@ class AttackModel:
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
     model.add(Flatten())
     model.add(Dense(4*EnvDef.SPATIAL_OUTPUT[0], activation='relu'))
-    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='softmax'))
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='linear'))
 
     if os.path.exists(self.modelName):
       model.load_weights(self.modelName)
-    model.compile(loss='categorical_crossentropy', optimizer='adam')
+    #model.compile(loss='categorical_crossentropy', optimizer='adam')
 
     self.model = model
 
