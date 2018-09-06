@@ -133,7 +133,7 @@ class Game:
     :return:
     '''
     # HACK!!!
-    pole = int(2*self.radius/3)
+    pole = int(2*self.radius/3)-1
     self.board.change_ownership(CellId(-pole, pole), self.real_players[0].name, Cell.MaximumResource)
     self.board.change_ownership(CellId(pole, -pole), self.real_players[1].name, Cell.MaximumResource)
     if len(self.real_players) > 2:

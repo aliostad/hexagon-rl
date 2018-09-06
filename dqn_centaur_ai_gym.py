@@ -28,7 +28,7 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   CELL_FEATURE = 1
-  MAX_GRID_LENGTH = 33
+  MAX_GRID_LENGTH = 5
   SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
 
@@ -114,15 +114,13 @@ class HierarchicalCentaurEnv(Env):
     self.centaur.current_move = self.centaur.movex(self.world)
     stats, isFinished = self.game.run_sync()
     info = self.game.board.get_cell_infos_for_player(EnvDef.centaur_name)
-    reward = -1
+    reward = len(info) - self.cell_count
     if len(info) == 0 or self.game.round_no > EnvDef.MAX_ROUND:
       isFinished = True  # it has no cells anymore
     else:
-      reward = (len(info) - self.cell_count) if self.centaur.was_called else 0
       self.cell_count = len(info)
     if self.game.round_no % 100 == 0:
       print(self.cell_count)
-
     if isFinished:
       winner = stats[0]
       reward = 1000 if winner.playerName == EnvDef.centaur_name else -1000
@@ -142,7 +140,8 @@ class HierarchicalCentaurEnv(Env):
     playerView = PlayerView(self.game.round_no, info)
     wrld = self.centaur.build_world(playerView.ownedCells)
     self.push_world(wrld)
-    rewards = {name: -50 if name in self.centaur.illegal_move_by_agents else reward for name in self.centaur.was_called}
+    rewards = {name: -5 if name in self.centaur.illegal_move_by_agents else
+      reward for name in self.centaur.was_called}
     self.centaur.reset_state()
     return wrld, rewards, isFinished, {}
 
@@ -171,10 +170,9 @@ class HierarchicalCentaurEnv(Env):
       self.shortMemory.append(World([]))
 
     self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
-    self.players = [Aliostad('ali'), Aliostad('random80', 0.80), self.centaur, Aliostad('random30', 0.3),
-                    Aliostad('random60', 0.6), Aliostad('random70', 0.7)]
+    self.players = [self.centaur, Aliostad('random99', 0.99)]
     shuffle(self.players)
-    self.game = Game(EnvDef.game_name, self.players, radius=11)
+    self.game = Game(EnvDef.game_name, self.players, radius=3)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
     self.game.start()
     playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
