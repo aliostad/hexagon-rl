@@ -67,7 +67,7 @@ class MultiAgent(Agent):
     pass
 
   def backward(self, rewards, terminal):
-    if terminal and self.interim_filenames is not None:
+    if terminal and self.interim_filenames is not None and np.random.uniform() < self.save_frequency:
       self.save_weights(self.interim_filenames)
     return {name: self.inner_agents[name].backward(rewards[name], terminal) for name in rewards}
 
@@ -102,7 +102,7 @@ class MultiAgent(Agent):
   def forward(self, observations):
     return {name: self.inner_agents[name].forward(observations[name]) for name in observations}
 
-  def __init__(self, innerAgents, processor):
+  def __init__(self, innerAgents, processor, save_frequency=1.):
     """
 
     :type innerAgents: dict of str: Agent
@@ -111,6 +111,7 @@ class MultiAgent(Agent):
     self.inner_agents = innerAgents
     self.compiled = True
     self.interim_filenames = None
+    self.save_frequency = save_frequency
 
   def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
           visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
