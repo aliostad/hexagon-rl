@@ -413,7 +413,6 @@ class AttackModel:
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(1, (3, 3), padding='same', activation='relu'))
     model.add(Flatten())
-    model.add(Dense(4*EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
 
     #model.compile(loss='categorical_crossentropy', optimizer='adam')
