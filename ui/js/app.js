@@ -138,7 +138,11 @@ function draw(radius, pointsAxial, playerStats) {
       })
       .style("fill", function (d,i) {
         return getColour(d[0].owner);
-      });
+      })
+      .append("title")
+        .text(function (d, i) {
+            return d[0].nwes + "_" + d[0].x;
+        });
 
   g
       .selectAll("text")

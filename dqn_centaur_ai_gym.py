@@ -36,7 +36,6 @@ class AgentType:
   Attack = 'Attack'
   Boost = 'Boost'
 
-
 # __________________________________________________________________________________________________________________________
 class SuperCentaurPlayer(Aliostad):
   def __init__(self, name):
@@ -61,7 +60,10 @@ class SuperCentaurPlayer(Aliostad):
     """
     #self.was_called[AgentType.BoostDecision] = True
     #return self.actions[AgentType.BoostDecision] == 1
-    return np.random.uniform() < 0.23
+    isTimeForBoost = np.random.uniform() < 0.23
+    if isTimeForBoost:
+      x=1
+    return isTimeForBoost
 
   def move(self, playerView):
     mv = self.current_move
@@ -169,7 +171,7 @@ class HierarchicalCentaurEnv(Env):
       self.shortMemory.append(World([]))
 
     self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
-    self.players = [self.centaur, Aliostad('random80', 0.8)]
+    self.players = [self.centaur, Aliostad('random50', 0.5)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=3)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
@@ -409,9 +411,10 @@ class AttackModel:
               input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
     model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
+    model.add(Conv2D(1, (3, 3), padding='same', activation='relu'))
     model.add(Flatten())
-    model.add(Dense(4*EnvDef.SPATIAL_OUTPUT[0], activation='relu'))
-    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='linear'))
+    model.add(Dense(4*EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
 
     #model.compile(loss='categorical_crossentropy', optimizer='adam')
 
