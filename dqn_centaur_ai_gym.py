@@ -414,8 +414,6 @@ class AttackModel:
     model.add(Dense(4*EnvDef.SPATIAL_OUTPUT[0], activation='relu'))
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='linear'))
 
-    if os.path.exists(self.modelName):
-      model.load_weights(self.modelName)
     #model.compile(loss='categorical_crossentropy', optimizer='adam')
 
     self.model = model
@@ -513,6 +511,8 @@ if __name__ == '__main__':
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc)
   agent.inner_agents[AgentType.Attack].compile(Adam(lr=1e-3), metrics=['mae'])
+  if os.path.exists(attack_model.modelName):
+    agent.inner_agents[AgentType.Attack].load_weights(attack_model.modelName)
 
   hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
