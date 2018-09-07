@@ -122,7 +122,7 @@ class HierarchicalCentaurEnv(Env):
       print(self.cell_count)
     if isFinished:
       winner = stats[0]
-      reward = 1000 if winner.playerName == EnvDef.centaur_name else -1000
+      reward = 20 if winner.playerName == EnvDef.centaur_name else -20
       if winner.playerName in self.leaderBoard:
         self.leaderBoard[winner.playerName] += 1
       else:
