@@ -4,8 +4,6 @@ from rl.agents import DQNAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
 from rl.policy import BoltzmannQPolicy
 
-from keras.models import Model, Input
-
 from centaur import *
 from random import shuffle
 from multi_agent import *
@@ -14,8 +12,6 @@ import hexagon_ui_api
 import os
 from square_grid import *
 import numpy as np
-from numpy.core.multiarray import *
-import copy
 
 # ______________________________________________________________________________________________________________________________
 class EnvDef:
@@ -33,7 +29,7 @@ class EnvDef:
   EPISODE_REWARD = 1000
   MOVE_REWARD_MULTIPLIER = 1
   DONT_OWN_MOVE_REWARD = -5
-  CANT_ATTACK_MOVE_REWARD = -2
+  CANT_ATTACK_MOVE_REWARD = -3
 
 class AgentType:
   BoostDecision = 'BoostDecision'
@@ -415,6 +411,7 @@ class AttackModel:
               input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
     model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
+    model.add(Conv2D(1, (3, 3), padding='same', activation='relu'))
     model.add(Flatten())
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0] * 4, activation='relu'))
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
@@ -491,7 +488,7 @@ if __name__ == '__main__':
 
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
-  agent.inner_agents[AgentType.Attack].compile(Adam(lr=1e-3), metrics=['mae'])
+  agent.inner_agents[AgentType.Attack].compile(Adam(lr=0.01), metrics=['mean_squared_logarithmic_error'])
   if os.path.exists(attack_model.modelName):
     agent.inner_agents[AgentType.Attack].load_weights(attack_model.modelName)
 
