@@ -23,7 +23,7 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   CELL_FEATURE = 1
-  MAX_GRID_LENGTH = 5
+  MAX_GRID_LENGTH = 8
   SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
   EPISODE_REWARD = 200
@@ -31,10 +31,43 @@ class EnvDef:
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
 
+
+
+# __________________________________________________________________________________________________________________________
+
+class MaskableDQNAgent(DQNAgent):
+
+  def __init__(self, model, policy=None, test_policy=None, enable_double_dqn=True, enable_dueling_network=False,
+               dueling_type='avg', *args, **kwargs):
+    DQNAgent.__init__(self, model, policy=policy, test_policy=test_policy,
+                      enable_double_dqn=enable_double_dqn, enable_dueling_network=enable_dueling_network,
+                      dueling_type=dueling_type, mask_processor=None, *args, **kwargs)
+    self.mask_processor = mask_processor
+
+  def forward(self, observation):
+    # Select an action.
+    state = self.memory.get_recent_state(observation)
+    q_values = self.compute_q_values(state)
+    if self.mask_processor is not None:
+      q_values = self.mask_processor(q_values)
+    if self.training:
+      action = self.policy.select_action(q_values=q_values)
+    else:
+      action = self.test_policy.select_action(q_values=q_values)
+
+    # Book-keeping.
+    self.recent_observation = observation
+    self.recent_action = action
+
+    return action
+
+# __________________________________________________________________________________________________________________________
+
 class AgentType:
   BoostDecision = 'BoostDecision'
   Attack = 'Attack'
   Boost = 'Boost'
+
 
 # __________________________________________________________________________________________________________________________
 class SuperCentaurPlayer(Aliostad):
@@ -173,7 +206,7 @@ class HierarchicalCentaurEnv(Env):
     self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
     self.players = [self.centaur, Aliostad('random80', 0.8)]
     shuffle(self.players)
-    self.game = Game(EnvDef.game_name, self.players, radius=3)
+    self.game = Game(EnvDef.game_name, self.players, radius=5)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
     self.game.start()
     playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
@@ -409,9 +442,9 @@ class AttackModel:
     model = Sequential()
     model.add(Conv2D(128, (3, 3), padding='same', activation='relu',
               input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
-    model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(1, (3, 3), padding='same', activation='tanh'))
+    model.add(Conv2D(16, (1, 1), padding='same', activation='relu'))
+    model.add(Conv2D(4, (1, 1), padding='same', activation='relu'))
+    model.add(Conv2D(1, (1, 1), padding='same', activation='tanh'))
     model.add(Flatten())
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
 
@@ -481,7 +514,7 @@ if __name__ == '__main__':
                           processor=prc.inner_processors[AgentType.Attack],
                           nb_actions=EnvDef.SPATIAL_OUTPUT[0],
                           memory=memory2, nb_steps_warmup=500,
-                          enable_dueling_network=True, dueling_type='avg')
+                          enable_dueling_network=False, enable_double_dqn=False, dueling_type='avg')
 
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
