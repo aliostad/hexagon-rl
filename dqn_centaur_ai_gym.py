@@ -514,7 +514,7 @@ if __name__ == '__main__':
                           processor=prc.inner_processors[AgentType.Attack],
                           nb_actions=EnvDef.SPATIAL_OUTPUT[0],
                           memory=memory2, nb_steps_warmup=500,
-                          enable_dueling_network=False, enable_double_dqn=False, dueling_type='avg')
+                          enable_dueling_network=True, enable_double_dqn=False, dueling_type='avg')
 
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
