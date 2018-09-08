@@ -31,9 +31,9 @@ class EnvDef:
   SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
   EPISODE_REWARD = 1000
-  MOVE_REWARD_MULTIPLIER = 10
-  DONT_OWN_MOVE_REWARD = -50
-  CANT_ATTACK_MOVE_REWARD = -20
+  MOVE_REWARD_MULTIPLIER = 1
+  DONT_OWN_MOVE_REWARD = -5
+  CANT_ATTACK_MOVE_REWARD = -2
 
 class AgentType:
   BoostDecision = 'BoostDecision'
@@ -415,8 +415,8 @@ class AttackModel:
               input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
     model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(1, (3, 3), padding='same', activation='relu'))
     model.add(Flatten())
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0] * 4, activation='relu'))
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
 
     #model.compile(loss='categorical_crossentropy', optimizer='adam')
