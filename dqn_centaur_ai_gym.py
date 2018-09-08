@@ -30,6 +30,9 @@ class EnvDef:
   MAX_GRID_LENGTH = 5
   SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
+  EPISODE_REWARD = 1000
+  MOVE_REWARD_MULTIPLIER = 10
+  ILLEGAL_MOVE_REWARD = -20
 
 class AgentType:
   BoostDecision = 'BoostDecision'
@@ -115,7 +118,7 @@ class HierarchicalCentaurEnv(Env):
     self.centaur.current_move = self.centaur.movex(self.world)
     stats, isFinished = self.game.run_sync()
     info = self.game.board.get_cell_infos_for_player(EnvDef.centaur_name)
-    reward = len(info) - self.cell_count
+    reward = (len(info) - self.cell_count) * EnvDef.MOVE_REWARD_MULTIPLIER
     if len(info) == 0 or self.game.round_no > EnvDef.MAX_ROUND:
       isFinished = True  # it has no cells anymore
     else:
@@ -124,7 +127,7 @@ class HierarchicalCentaurEnv(Env):
       print(self.cell_count)
     if isFinished:
       winner = stats[0]
-      reward = 20 if winner.playerName == EnvDef.centaur_name else -20
+      reward = EnvDef.EPISODE_REWARD if winner.playerName == EnvDef.centaur_name else -EnvDef.EPISODE_REWARD
       if winner.playerName in self.leaderBoard:
         self.leaderBoard[winner.playerName] += 1
       else:
@@ -141,7 +144,7 @@ class HierarchicalCentaurEnv(Env):
     playerView = PlayerView(self.game.round_no, info)
     wrld = self.centaur.build_world(playerView.ownedCells)
     self.push_world(wrld)
-    rewards = {name: -5 if name in self.centaur.illegal_move_by_agents else
+    rewards = {name: EnvDef.ILLEGAL_MOVE_REWARD if name in self.centaur.illegal_move_by_agents else
       reward for name in self.centaur.was_called}
     self.centaur.reset_state()
     return wrld, rewards, isFinished, {}
