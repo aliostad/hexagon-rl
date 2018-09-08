@@ -407,15 +407,13 @@ class AttackModel:
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
 
     model = Sequential()
-    model.add(Conv2D(128, (3, 3), padding='same', activation='relu',
+    model.add(Conv2D(128, (3, 3), padding='same', activation='tanh',
               input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
     model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(4, (3, 3), padding='same', activation='tanh'))
     model.add(Conv2D(1, (3, 3), padding='same', activation='tanh'))
     model.add(Flatten())
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
-
-    #model.compile(loss='categorical_crossentropy', optimizer='adam')
 
     self.model = model
 
