@@ -485,7 +485,7 @@ if __name__ == '__main__':
 
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
-  agent.inner_agents[AgentType.Attack].compile(Adam(lr=0.01), metrics=['mean_squared_logarithmic_error'])
+  agent.inner_agents[AgentType.Attack].compile(Adam(lr=0.001), metrics=['mean_squared_logarithmic_error'])
   if os.path.exists(attack_model.modelName):
     agent.inner_agents[AgentType.Attack].load_weights(attack_model.modelName)
 
