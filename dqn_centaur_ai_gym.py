@@ -32,7 +32,8 @@ class EnvDef:
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
   EPISODE_REWARD = 1000
   MOVE_REWARD_MULTIPLIER = 10
-  ILLEGAL_MOVE_REWARD = -50
+  DONT_OWN_MOVE_REWARD = -50
+  CANT_ATTACK_MOVE_REWARD = -20
 
 class AgentType:
   BoostDecision = 'BoostDecision'
@@ -49,7 +50,7 @@ class SuperCentaurPlayer(Aliostad):
     self.actions = {}
     self.current_move = None
     self.was_called = {}
-    self.illegal_move_by_agents = {}
+    self.illegal_move_reward_by_agents = {}
 
   #  just overriding for instrumentation purposes.
   def turnx(self, world):
@@ -76,11 +77,11 @@ class SuperCentaurPlayer(Aliostad):
     self.was_called[AgentType.Attack] = True
     cellId = self.actions[AgentType.Attack]
     if cellId not in world.uberCells:
-      self.illegal_move_by_agents[AgentType.Attack] = True
+      self.illegal_move_reward_by_agents[AgentType.Attack] = EnvDef.DONT_OWN_MOVE_REWARD
       print('illegal move (dont own): {}'.format(cellId))
       return None
     if not world.uberCells[cellId].canAttackOrExpand:
-      self.illegal_move_by_agents[AgentType.Attack] = True
+      self.illegal_move_reward_by_agents[AgentType.Attack] = EnvDef.CANT_ATTACK_MOVE_REWARD
       print('illegal move (cant attack): {}'.format(cellId))
       return None
     print ('legal!!')
@@ -144,7 +145,7 @@ class HierarchicalCentaurEnv(Env):
     playerView = PlayerView(self.game.round_no, info)
     wrld = self.centaur.build_world(playerView.ownedCells)
     self.push_world(wrld)
-    rewards = {name: EnvDef.ILLEGAL_MOVE_REWARD if name in self.centaur.illegal_move_by_agents else
+    rewards = {name: (reward + self.centaur.illegal_move_reward_by_agents[name]) if name in self.centaur.illegal_move_reward_by_agents else
       reward for name in self.centaur.was_called}
     self.centaur.reset_state()
     return wrld, rewards, isFinished, {}
@@ -174,7 +175,7 @@ class HierarchicalCentaurEnv(Env):
       self.shortMemory.append(World([]))
 
     self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
-    self.players = [self.centaur, Aliostad('random50', 0.5)]
+    self.players = [self.centaur, Aliostad('random80', 0.8)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=3)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
