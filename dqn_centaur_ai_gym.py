@@ -480,7 +480,7 @@ if __name__ == '__main__':
                             batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
 
   decision_agent.compile()
-  memory2 = SequentialMemory(limit=10000, window_length=1)
+  memory2 = SequentialMemory(limit=100000, window_length=1)
   policy = BoltzmannQPolicy()
   attack_agent = DQNAgent(attack_model.model,
                           policy=policy, batch_size=16,
