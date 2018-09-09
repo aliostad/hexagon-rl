@@ -34,12 +34,12 @@ class EnvDef:
 
 # __________________________________________________________________________________________________________________________
 
-class PositiveEpsGreedyQPolicy(EpsGreedyQPolicy):
+class NoneZeroEpsGreedyQPolicy(EpsGreedyQPolicy):
   """Implement the epsilon greedy policy
 
   Eps Greedy policy either:
 
-  - takes a random action with probability epsilon from positive Q-values
+  - takes a random action with probability epsilon from Non-Zero Q-values
   - takes current best action with prob (1 - epsilon)
   """
 
@@ -63,7 +63,8 @@ class PositiveEpsGreedyQPolicy(EpsGreedyQPolicy):
       idx = np.argmax(q_values)
       copy_q_values[idx] = 0
       for i in range(0, nb_actions):
-        copy_q_values[i] *= np.random.uniform()
+        val = copy_q_values[i]
+        copy_q_values[i] = -1e8 if val == 0 else val * np.random.uniform()
       action = np.argmax(copy_q_values)
     else:
       action = np.argmax(q_values)
@@ -572,7 +573,7 @@ if __name__ == '__main__':
 
   decision_agent.compile()
   memory2 = SequentialMemory(limit=100000, window_length=1)
-  policy = PositiveEpsGreedyQPolicy()
+  policy = NoneZeroEpsGreedyQPolicy()
   attack_agent = MaskableDQNAgent(attack_model.model,
                           policy=policy, batch_size=16,
                           processor=prc.inner_processors[AgentType.Attack],
