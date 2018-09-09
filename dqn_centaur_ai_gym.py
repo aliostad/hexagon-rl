@@ -2,7 +2,7 @@ from keras.layers import Flatten, Conv2D
 from keras.optimizers import Adam
 from rl.agents import DQNAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
-from rl.policy import MaxBoltzmannQPolicy
+from rl.policy import EpsGreedyQPolicy
 
 from centaur import *
 from random import shuffle
@@ -32,6 +32,52 @@ class EnvDef:
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
 
+# __________________________________________________________________________________________________________________________
+
+class PositiveEpsGreedyQPolicy(EpsGreedyQPolicy):
+  """Implement the epsilon greedy policy
+
+  Eps Greedy policy either:
+
+  - takes a random action with probability epsilon from positive Q-values
+  - takes current best action with prob (1 - epsilon)
+  """
+
+  def __init__(self, eps=.1):
+    super(EpsGreedyQPolicy, self).__init__()
+    self.eps = eps
+
+  def select_action(self, q_values):
+    """Return the selected action
+
+    # Arguments
+        q_values (np.ndarray): List of the estimations of Q for each action
+
+    # Returns
+        Selection action
+    """
+    assert q_values.ndim == 1
+    nb_actions = q_values.shape[0]
+    if np.random.uniform() < self.eps:
+      copy_q_values = np.copy(q_values)
+      idx = np.argmax(q_values)
+      copy_q_values[idx] = 0
+      for i in range(0, nb_actions):
+        copy_q_values[i] *= np.random.uniform()
+      action = np.argmax(copy_q_values)
+    else:
+      action = np.argmax(q_values)
+    return action
+
+  def get_config(self):
+    """Return configurations of EpsGreedyPolicy
+
+    # Returns
+        Dict of config
+    """
+    config = super(EpsGreedyQPolicy, self).get_config()
+    config['eps'] = self.eps
+    return config
 
 
 # __________________________________________________________________________________________________________________________
@@ -322,10 +368,9 @@ class CentaurAttackProcessor(Processor):
     idx = action
     y = idx % EnvDef.SPATIAL_INPUT[1]
     x = idx / EnvDef.SPATIAL_INPUT[1]
-    if idx == 0:
-      print('zero!')
     thid = GridCellId(x, y).transpose(-(EnvDef.SPATIAL_INPUT[0] / 2), -(EnvDef.SPATIAL_INPUT[1] / 2))
-    return thid.to_cell_id()
+    cid = thid.to_cell_id()
+    return cid
 
   @staticmethod
   def add_noise(arr, noise_range=0.3):
@@ -527,7 +572,7 @@ if __name__ == '__main__':
 
   decision_agent.compile()
   memory2 = SequentialMemory(limit=100000, window_length=1)
-  policy = MaxBoltzmannQPolicy()
+  policy = PositiveEpsGreedyQPolicy()
   attack_agent = MaskableDQNAgent(attack_model.model,
                           policy=policy, batch_size=16,
                           processor=prc.inner_processors[AgentType.Attack],
