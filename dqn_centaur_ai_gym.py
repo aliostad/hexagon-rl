@@ -2,7 +2,7 @@ from keras.layers import Flatten, Conv2D
 from keras.optimizers import Adam
 from rl.agents import DQNAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
-from rl.policy import BoltzmannQPolicy
+from rl.policy import MaxBoltzmannQPolicy
 
 from centaur import *
 from random import shuffle
@@ -12,6 +12,7 @@ import hexagon_ui_api
 import os
 from square_grid import *
 import numpy as np
+import warnings
 
 # ______________________________________________________________________________________________________________________________
 class EnvDef:
@@ -38,10 +39,10 @@ class EnvDef:
 class MaskableDQNAgent(DQNAgent):
 
   def __init__(self, model, policy=None, test_policy=None, enable_double_dqn=True, enable_dueling_network=False,
-               dueling_type='avg', *args, **kwargs):
+               dueling_type='avg', mask_processor=None, *args, **kwargs):
     DQNAgent.__init__(self, model, policy=policy, test_policy=test_policy,
                       enable_double_dqn=enable_double_dqn, enable_dueling_network=enable_dueling_network,
-                      dueling_type=dueling_type, mask_processor=None, *args, **kwargs)
+                      dueling_type=dueling_type, *args, **kwargs)
     self.mask_processor = mask_processor
 
   def forward(self, observation):
@@ -49,7 +50,7 @@ class MaskableDQNAgent(DQNAgent):
     state = self.memory.get_recent_state(observation)
     q_values = self.compute_q_values(state)
     if self.mask_processor is not None:
-      q_values = self.mask_processor(q_values)
+      q_values = self.mask_processor.mask(q_values)
     if self.training:
       action = self.policy.select_action(q_values=q_values)
     else:
@@ -339,6 +340,24 @@ class CentaurAttackProcessor(Processor):
     noisy = np.array([value * np.random.uniform(1. - noise_range, 1. + noise_range) for value in flat])
     return noisy.reshape(shp)
 
+  def mask(self, Y):
+    """
+
+    :type Y: ndarray
+    :return:
+    """
+    assert len(Y.shape) == 1  # it is flat
+    if self.last_world is None:
+      warnings.warn("Last world is None. Could not mask.")
+      return Y
+    mask = self.buildOutput(self.last_world).flatten()
+    assert mask.shape == Y.shape
+
+    for i in range(0, len(Y)):
+      if mask[i] == 0:
+        Y[i] = 0
+    return Y
+
   def process_and_mask(self, Y):
     """
 
@@ -437,7 +456,7 @@ class AttackModel:
 
     :type theMethod: str
     """
-    self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000))
+    self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000000))
 
     model = Sequential()
     model.add(Conv2D(128, (3, 3), padding='same', activation='relu',
@@ -508,13 +527,14 @@ if __name__ == '__main__':
 
   decision_agent.compile()
   memory2 = SequentialMemory(limit=100000, window_length=1)
-  policy = BoltzmannQPolicy()
-  attack_agent = DQNAgent(attack_model.model,
+  policy = MaxBoltzmannQPolicy()
+  attack_agent = MaskableDQNAgent(attack_model.model,
                           policy=policy, batch_size=16,
                           processor=prc.inner_processors[AgentType.Attack],
                           nb_actions=EnvDef.SPATIAL_OUTPUT[0],
                           memory=memory2, nb_steps_warmup=500,
-                          enable_dueling_network=True, enable_double_dqn=False, dueling_type='avg')
+                          enable_dueling_network=True,
+                          mask_processor=prc.inner_processors[AgentType.Attack])
 
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
