@@ -133,7 +133,7 @@ class SuperCentaurPlayer(Aliostad):
   def turnx(self, world):
     return Aliostad.turnx(self, world)
 
-  def timeForBoost(self, world):
+  def timeForBoost_zz(self, world):
     """
 
     :type world: World
@@ -252,7 +252,7 @@ class HierarchicalCentaurEnv(Env):
       self.shortMemory.append(World([]))
 
     self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
-    self.players = [self.centaur, Aliostad('random80', 0.8)]
+    self.players = [self.centaur, Aliostad('Ali')]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=5)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
