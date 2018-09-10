@@ -14,6 +14,7 @@ import os
 from square_grid import *
 import numpy as np
 import warnings
+import argparse
 
 # ______________________________________________________________________________________________________________________________
 class EnvDef:
@@ -593,10 +594,21 @@ class AttackModel:
 
 if __name__ == '__main__':
 
+  parser = argparse.ArgumentParser()
+  parser.add_argument('train', help="what to do", type=bool, nargs='?')
+  parser.add_argument('test', help="what to do", type=bool, nargs='?')
+  parser.add_argument('--model_name', '-m', help="model name", type=str)
+  parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
+
   randomness = None
   attack_model_name = 'Attack_model_params.h5f'
-  if len(sys.argv) > 2:
-    attack_model_name = sys.argv[2]
+
+  args = parser.parse_args(sys.argv)
+  if args.model_name is not None:
+    attack_model_name = arg.model_name
+
+  if args.randomness is not None:
+    randomness = args.randomness
 
   env = HierarchicalCentaurEnv(opponent_randomness=randomness)
   np.random.seed(42)
@@ -605,10 +617,6 @@ if __name__ == '__main__':
   prc = CentaurDecisionProcessor()
   dec_model = DecisionModel()
   attack_model = AttackModel(attack_model_name)
-
-  if len(sys.argv) > 3:
-    randomness = float(sys.argv[3])
-    print('Randomness: {}'.format(randomness))
 
   prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor()})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
@@ -638,10 +646,10 @@ if __name__ == '__main__':
   hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
-  elif sys.argv[1] == 'train':
+  elif args.train:
     agent.fit(env, nb_steps=300 * 1000, visualize=False, verbose=2, interim_filenames={AgentType.Attack: attack_model.modelName})
     agent.save_weights({AgentType.BoostDecision: dec_model.modelName, AgentType.Attack: attack_model.modelName}, overwrite=True)
-  elif sys.argv[1] == 'test':
-    agent.test(env, nb_episodes=100)
+  elif args.test:
+    agent.test(env, nb_episodes=1000)
   else:
     print('argument not recognised: ' + sys.argv[1])
