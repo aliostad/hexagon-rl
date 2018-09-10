@@ -167,7 +167,8 @@ class SuperCentaurPlayer(Aliostad):
 
 # __________________________________________________________________________________________________________________________
 class HierarchicalCentaurEnv(Env):
-  def __init__(self):
+  def __init__(self, opponent_randomness=None):
+    self.opponent_randomness = opponent_randomness
     self.players = []
     self.game = None
     self._seed = 0
@@ -252,7 +253,7 @@ class HierarchicalCentaurEnv(Env):
       self.shortMemory.append(World([]))
 
     self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
-    self.players = [self.centaur, Aliostad('Ali')]
+    self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=5)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
@@ -505,11 +506,14 @@ class AttackModel:
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000000))
 
     model = Sequential()
-    model.add(Conv2D(128, (3, 3), padding='same', activation='relu',
+    model.add(Conv2D(128, (5, 5), padding='same', activation='relu',
               input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
+    model.add(Conv2D(64, (3, 3), padding='same', activation='relu',
+              iname='INPUT_ATTACK'))
+
     model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(1, (1, 1), padding='same', activation='tanh'))
+    model.add(Conv2D(1, (3, 3), padding='same', activation='tanh'))
     model.add(Flatten())
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
 
@@ -555,12 +559,14 @@ class AttackModel:
 
 
 if __name__ == '__main__':
-  env = HierarchicalCentaurEnv()
-  np.random.seed(42)
-  env.seed(42)
 
   if len(sys.argv) > 2:
-    method = sys.argv[2]
+    randomness = float(sys.argv[2])
+    print('Randomness: {}'.format(randomness))
+
+  env = HierarchicalCentaurEnv(opponent_randomness=randomness)
+  np.random.seed(42)
+  env.seed(42)
 
   prc = CentaurDecisionProcessor()
   dec_model = DecisionModel()
