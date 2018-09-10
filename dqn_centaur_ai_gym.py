@@ -558,6 +558,7 @@ class AttackModel:
 
 if __name__ == '__main__':
 
+  randomness = None
   if len(sys.argv) > 2:
     randomness = float(sys.argv[2])
     print('Randomness: {}'.format(randomness))
