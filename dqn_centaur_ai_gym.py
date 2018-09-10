@@ -252,7 +252,7 @@ class HierarchicalCentaurEnv(Env):
       self.shortMemory.append(World([]))
 
     self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
-    self.players = [self.centaur, Aliostad('Ali')]
+    self.players = [self.centaur, Aliostad('random70', 70)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=5)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
