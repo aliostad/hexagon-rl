@@ -508,9 +508,7 @@ class AttackModel:
     model = Sequential()
     model.add(Conv2D(128, (5, 5), padding='same', activation='relu',
               input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
-    model.add(Conv2D(64, (3, 3), padding='same', activation='relu',
-              iname='INPUT_ATTACK'))
-
+    model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
     model.add(Conv2D(1, (3, 3), padding='same', activation='tanh'))
