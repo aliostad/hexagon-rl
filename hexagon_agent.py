@@ -63,20 +63,20 @@ class UberCell:
     self.nones = filter(lambda x: x.isOwned is None, self.neighbours)
     self.enemies = filter(lambda x: x.isOwned == False, self.neighbours)
     self.owns = filter(lambda x: x.isOwned == True, self.neighbours)
-    self.noneOwns = filter(lambda x: x.isOwned is None or x.isOwned == False, self.neighbours)
+    self.nonOwns = filter(lambda x: x.isOwned is None or x.isOwned == False, self.neighbours)
 
     # how suitable is a cell for receiving boost
     #
     self.boostFactor = math.sqrt(sum((n.resources for n in self.enemies), 1)) * \
                        safeMax([n.resources for n in self.enemies], 1) / (self.resources + 1)
-    self.powerFactor = self.resources / (safeMin([n.resources for n in self.noneOwns]) + 1)
+    self.powerFactor = self.resources / (safeMin([n.resources for n in self.nonOwns]) + 1)
     self.expansionPotential = len(self.nones) * 100
     self.attackPotential = self.resources * \
-                           math.sqrt(max(self.resources - safeMin([n.resources for n in self.noneOwns]), 1)) / \
+                           math.sqrt(max(self.resources - safeMin([n.resources for n in self.nonOwns]), 1)) / \
                            math.log(sum([n.resources for n in self.enemies], 1) + 1, 5)
     self.hasEnemyNeighbours = any(self.enemies)
-    self.canAttack = any(filter(lambda x: x.resources < self.resources + 2, self.enemies))
-    self.canAttackOrExpand = any(filter(lambda x: x.resources < self.resources + 2, self.noneOwns))
+    self.canAttack = any(filter(lambda x: x.resources + 1 < self.resources, self.enemies))
+    self.canAttackOrExpand = any(filter(lambda x: (x.resources + 1) < self.resources, self.nonOwns))
     self.canAcceptTransfer = len(self.owns) > 0  # don't send to islands, no point (could be?)
     self.depth = 0
 
@@ -242,13 +242,17 @@ class Aliostad(Player):
       return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
 
     cellFrom = world.uberCells[cellFromId]
-    srt2 = sorted(cellFrom.enemies, key=lambda x: x.resources *
-                                                  (r.uniform(0.1, 05) if self.random_variation else 1))
+    srt2 = sorted(cellFrom.nonOwns, key=lambda x: x.resources *
+                                                  (r.uniform(0.1, 5) if self.random_variation else 1.))
     if len(srt2) == 0:
       return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
     cellTo = srt2[0]
+
+    assert cellFrom.resources > cellTo.resources, 'resources: from: {} - to: {}'.format(cellFrom.resources, cellTo.resources)
+
     amount = cellTo.resources + ((cellFrom.resources - cellTo.resources) * 70 / 100)
-    # print "{}: Attack from {} to {}".format(self.name, cellFrom.id, cellTo.id)
+    assert amount >= cellTo.resources
+    # print("{}: Attack from {} to {}".format(self.name, cellFrom.id, cellTo.id))
     return Move(cellFrom.id, cellTo.id, amount)
 
   def timeForBoost(self, world):
