@@ -594,9 +594,9 @@ class AttackModel:
 if __name__ == '__main__':
 
   randomness = None
+  attack_model_name = 'Attack_model_params.h5f'
   if len(sys.argv) > 2:
-    randomness = float(sys.argv[2])
-    print('Randomness: {}'.format(randomness))
+    attack_model_name = sys.argv[2]
 
   env = HierarchicalCentaurEnv(opponent_randomness=randomness)
   np.random.seed(42)
@@ -604,7 +604,11 @@ if __name__ == '__main__':
 
   prc = CentaurDecisionProcessor()
   dec_model = DecisionModel()
-  attack_model = AttackModel('Attack_model_params.h5f')
+  attack_model = AttackModel(attack_model_name)
+
+  if len(sys.argv) > 3:
+    randomness = float(sys.argv[3])
+    print('Randomness: {}'.format(randomness))
 
   prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor()})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
@@ -626,6 +630,8 @@ if __name__ == '__main__':
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
   agent.inner_agents[AgentType.Attack].compile(Adam(lr=0.001), metrics=['mean_squared_logarithmic_error'])
+  if len(sys.argv) > 2:
+    agent.inner_agents[AgentType.Attack].load_weights(attack_model_name)
   if os.path.exists(attack_model.modelName):
     agent.inner_agents[AgentType.Attack].load_weights(attack_model.modelName)
 
