@@ -179,7 +179,7 @@ class Game:
         success, errormsg = self.board.try_transfer(mv)
         if not success:
           pass
-          #print('Move {} from player {} illegal: {}'.format(self.round_no, p.name, errormsg))
+          print('Move {} from player {} illegal: {}'.format(self.round_no, p.name, errormsg))
 
     # OK now increment
     self.board.increment_resources()
