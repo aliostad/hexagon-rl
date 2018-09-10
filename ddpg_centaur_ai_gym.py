@@ -605,7 +605,7 @@ if __name__ == '__main__':
 
   args = parser.parse_args(sys.argv)
   if args.model_name is not None:
-    attack_model_name = arg.model_name
+    attack_model_name = args.model_name
 
   if args.randomness is not None:
     randomness = args.randomness
