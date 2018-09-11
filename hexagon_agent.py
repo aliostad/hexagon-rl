@@ -171,6 +171,7 @@ class Aliostad(Player):
     self.random_boost = randomBoostFactor
     self.f = open(name + ".log", mode='w')
     self.random_variation = randomVariation
+    self.boost_stats = []
 
   @staticmethod
   def transform_jsoncells_to_infos(cells):
@@ -335,9 +336,15 @@ class Aliostad(Player):
       stat.strategy = Strategy.Boost
       return self.getBoost(world), stat, world
     elif stat.resourceLossStreak > 3 or len(filter(lambda x: world.uberCells[x].canAttack,
-                                                   world.uberCells)) == 0 or self.timeForBoost(world):
-      stat.strategy = Strategy.Boost
-      return self.getBoost(world), stat, world
+                                                   world.uberCells)) == 0:
+      isTimeForBoost = self.timeForBoost(world)
+      self.boost_stats.append(isTimeForBoost)
+      if isTimeForBoost:
+        stat.strategy = Strategy.Boost
+        return self.getBoost(world), stat, world
+      else:
+        stat.strategy = Strategy.Attack
+        return self.getAttack(world), stat, world
     else:
       stat.strategy = Strategy.Attack
       return self.getAttack(world), stat, world
@@ -384,3 +391,9 @@ class Aliostad(Player):
                                                                    move.resources,
                                                                    world.cells[move.fromCell]))
     return move
+
+  def finish(self):
+    Player.finish(self)
+    total = len(self.boost_stats)
+    boosted = len(filter(lambda x: x, self.boost_stats))
+    return {'boost_ratio': (1. * boosted) / (total + 1e-5)}

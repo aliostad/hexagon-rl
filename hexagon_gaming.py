@@ -68,6 +68,10 @@ class Player:
     return True
 
   def finish(self):
+    """
+
+    :return: dict
+    """
     if not self._started:
       raise RuntimeError('Player not started')
     self._started = False
@@ -89,7 +93,6 @@ class Player:
     :return: Move
     """
     raise NotImplementedError("move")
-
 
 
 class Game:
@@ -184,7 +187,8 @@ class Game:
     # OK now increment
     self.board.increment_resources()
     stats = self.get_player_stats()
-    return self.get_player_stats(), max(map(lambda x: x.cellsOwned, stats)) == sum(map(lambda x: x.cellsOwned, stats))
+    isFinished = max(map(lambda x: x.cellsOwned, stats)) == sum(map(lambda x: x.cellsOwned, stats))
+    return self.get_player_stats(), isFinished, self._finish_players() if isFinished else {}
 
   def get_player_stat(self, name):
     infos = self.board.get_cell_infos_for_player(name)
@@ -193,10 +197,14 @@ class Game:
   def get_player_stats(self):
     return sorted(map(lambda p: self.get_player_stat(p.name), self.real_players), key=lambda s: s.cellsOwned, reverse=True)
 
+  def _finish_players(self):
+    result = {}
+    for p in self.real_players:
+      result[p.name] = p.finish()
+    return result
+
+
   def finish(self):
     if not self._started:
       raise RuntimeError('Game not started')
     self._started = False
-    for p in self.real_players:
-      p.finish()
-

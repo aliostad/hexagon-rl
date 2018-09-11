@@ -153,8 +153,7 @@ class SuperCentaurPlayer(Aliostad):
     #self.was_called[AgentType.BoostDecision] = True
     #return self.actions[AgentType.BoostDecision] == 1
     isTimeForBoost = np.random.uniform() < 0.23
-    if isTimeForBoost:
-      x=1
+    self.boost_stats.append(isTimeForBoost)
     return isTimeForBoost
 
   def move(self, playerView):
@@ -174,7 +173,6 @@ class SuperCentaurPlayer(Aliostad):
       return None
     print ('legal!!')
     return cellId
-
 
 # __________________________________________________________________________________________________________________________
 class HierarchicalCentaurEnv(Env):
@@ -206,7 +204,7 @@ class HierarchicalCentaurEnv(Env):
       self.centaur.actions[name] = actions[name]  # we can also deep copy
 
     self.centaur.current_move = self.centaur.movex(self.world)
-    stats, isFinished = self.game.run_sync()
+    stats, isFinished , extraInfo = self.game.run_sync()
     info = self.game.board.get_cell_infos_for_player(EnvDef.centaur_name)
     reward = (len(info) - self.cell_count) * EnvDef.MOVE_REWARD_MULTIPLIER
     if len(info) == 0 or self.game.round_no > EnvDef.MAX_ROUND:
@@ -226,7 +224,7 @@ class HierarchicalCentaurEnv(Env):
         if stat.playerName not in self.cellLeaderBoard:
           self.cellLeaderBoard[stat.playerName] = 0
         self.cellLeaderBoard[stat.playerName] += stat.cellsOwned
-        print('{} {} ({})'.format(stat.playerName, stat.cellsOwned, stat.totalResources))
+        print('{} {} ({}) - {}'.format(stat.playerName, stat.cellsOwned, stat.totalResources, str(extraInfo[stat.playerName])))
 
       for name in self.leaderBoard:
         print(' - {}: {} ({})'.format(name, self.leaderBoard[name], self.cellLeaderBoard[name]))
