@@ -601,7 +601,7 @@ if __name__ == '__main__':
   parser.add_argument('what', help="what to do", type=str)
   parser.add_argument('--model_name', '-m', help="model name", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
-  parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=float)
+  parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool)
   parser.add_argument('--testrounds', '-t', help="number of epochs when testing", type=int, default=100)
 
   randomness = None
@@ -622,7 +622,7 @@ if __name__ == '__main__':
   dec_model = DecisionModel()
   attack_model = AttackModel(attack_model_name)
 
-  prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor()})
+  prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor(random_action=args.randomaction)})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
   decision_agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
                             batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
