@@ -141,11 +141,7 @@ class SuperCentaurPlayer(Aliostad):
     self.was_called = {}
     self.illegal_move_reward_by_agents = {}
 
-  #  just overriding for instrumentation purposes.
-  def turnx(self, world):
-    return Aliostad.turnx(self, world)
-
-  def timeForBoost(self, world):
+  def timeForBoost_xx(self, world):
     """
 
     :type world: World
@@ -161,7 +157,7 @@ class SuperCentaurPlayer(Aliostad):
     mv = self.current_move
     return mv
 
-  def getAttackFromCellId(self, world):
+  def getAttackFromCellId_xx(self, world):
     self.was_called[AgentType.Attack] = True
     cellId = self.actions[AgentType.Attack]
     if cellId not in world.uberCells:

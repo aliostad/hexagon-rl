@@ -227,7 +227,7 @@ class Aliostad(Player):
                  (r.uniform(1.0, 3.0) if self.random_variation else 1)
                  , reverse=True)
 
-    return None if len(srt) == 0 else srt[0]
+    return None if len(srt) == 0 or not world.uberCells[srt[0]].canAttack else srt[0]
 
   def getAttack(self, world):
     '''
@@ -249,6 +249,8 @@ class Aliostad(Player):
       return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
     cellTo = srt2[0]
 
+    if cellFrom.resources <= cellTo.resources:
+      x = 1
     assert cellFrom.resources > cellTo.resources, 'resources: from: {} - to: {}'.format(cellFrom.resources, cellTo.resources)
 
     amount = cellTo.resources + ((cellFrom.resources - cellTo.resources) * 70 / 100)
