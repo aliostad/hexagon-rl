@@ -130,9 +130,10 @@ class AgentType:
 
 # __________________________________________________________________________________________________________________________
 class SuperCentaurPlayer(Aliostad):
-  def __init__(self, name):
+  def __init__(self, name, boost_likelihood=0.23):
     Aliostad.__init__(self, name)
     self.reset_state()
+    self.boost_likelihood = boost_likelihood
 
   def reset_state(self):
     self.actions = {}
@@ -152,7 +153,7 @@ class SuperCentaurPlayer(Aliostad):
     """
     #self.was_called[AgentType.BoostDecision] = True
     #return self.actions[AgentType.BoostDecision] == 1
-    isTimeForBoost = np.random.uniform() < 0.23
+    isTimeForBoost = np.random.uniform() < self.boost_likelihood
     self.boost_stats.append(isTimeForBoost)
     return isTimeForBoost
 
@@ -176,7 +177,7 @@ class SuperCentaurPlayer(Aliostad):
 
 # __________________________________________________________________________________________________________________________
 class HierarchicalCentaurEnv(Env):
-  def __init__(self, opponent_randomness=None):
+  def __init__(self, centaur_boost_likelihood, opponent_randomness=None):
     self.opponent_randomness = opponent_randomness
     self.players = []
     self.game = None
@@ -188,6 +189,7 @@ class HierarchicalCentaurEnv(Env):
     self.leaderBoard = {}
     self.cellLeaderBoard = {}
     self.shortMemory = []
+    self.centaur_boost_likelihood = centaur_boost_likelihood
 
   def configure(self, *args, **kwargs):
     pass
@@ -261,7 +263,7 @@ class HierarchicalCentaurEnv(Env):
     for i in range(0, EnvDef.SHORT_MEMORY_SIZE):
       self.shortMemory.append(World([]))
 
-    self.centaur = SuperCentaurPlayer(EnvDef.centaur_name)
+    self.centaur = SuperCentaurPlayer(EnvDef.centaur_name, boost_likelihood=self.centaur_boost_likelihood)
     self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=5)
@@ -601,6 +603,7 @@ if __name__ == '__main__':
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
   parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool, nargs='?', const=True)
   parser.add_argument('--testrounds', '-t', help="number of epochs when testing", type=int, default=100)
+  parser.add_argument('--centaur_boost_likelihood', '-b', help="likelihood of random boost for centaur", type=float, default=0.23)
 
   randomness = None
   attack_model_name = 'Attack_model_params.h5f'
@@ -612,7 +615,7 @@ if __name__ == '__main__':
   if args.randomness is not None:
     randomness = args.randomness
 
-  env = HierarchicalCentaurEnv(opponent_randomness=randomness)
+  env = HierarchicalCentaurEnv(opponent_randomness=randomness, centaur_boost_likelihood=args.centaur_boost_likelihood)
   np.random.seed(42)
   env.seed(42)
 
