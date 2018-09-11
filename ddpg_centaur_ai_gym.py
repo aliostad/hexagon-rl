@@ -601,7 +601,7 @@ if __name__ == '__main__':
   parser.add_argument('what', help="what to do", type=str)
   parser.add_argument('--model_name', '-m', help="model name", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
-  parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool)
+  parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool, nargs='?', const=True)
   parser.add_argument('--testrounds', '-t', help="number of epochs when testing", type=int, default=100)
 
   randomness = None
