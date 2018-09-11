@@ -324,10 +324,11 @@ class CentaurDecisionProcessor(Processor):
 
 # ______________________________________________________________________________________________________________________________
 class CentaurAttackProcessor(Processor):
-  def __init__(self, masking=True):
+  def __init__(self, masking=True, random_action=False):
     self.masking = masking
     self.last_world = None
     self.policy = NoneZeroEpsGreedyQPolicy()
+    self.random_action = random_action
 
   def buildInput(self, world):
     """
@@ -415,6 +416,8 @@ class CentaurAttackProcessor(Processor):
     for i in range(0, len(Y)):
       if mask[i] == 0:
         Y[i] = 0
+      elif self.random_action:
+        Y[i] = np.random.uniform()
     return Y
 
   def process_and_mask(self, Y):
@@ -598,7 +601,8 @@ if __name__ == '__main__':
   parser.add_argument('what', help="what to do", type=str)
   parser.add_argument('--model_name', '-m', help="model name", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
-  parser.add_argument('--testrounds', '-t', help="randomness of aliostad", type=int, default=100)
+  parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=float)
+  parser.add_argument('--testrounds', '-t', help="number of epochs when testing", type=int, default=100)
 
   randomness = None
   attack_model_name = 'Attack_model_params.h5f'
