@@ -144,7 +144,7 @@ class SuperCentaurPlayer(Aliostad):
   def turnx(self, world):
     return Aliostad.turnx(self, world)
 
-  def timeForBoost_zz(self, world):
+  def timeForBoost(self, world):
     """
 
     :type world: World
@@ -595,15 +595,15 @@ class AttackModel:
 if __name__ == '__main__':
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('train', help="what to do", type=bool, nargs='?')
-  parser.add_argument('test', help="what to do", type=bool, nargs='?')
+  parser.add_argument('what', help="what to do", type=str)
   parser.add_argument('--model_name', '-m', help="model name", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
+  parser.add_argument('--testrounds', '-t', help="randomness of aliostad", type=int, default=100)
 
   randomness = None
   attack_model_name = 'Attack_model_params.h5f'
 
-  args = parser.parse_args(sys.argv)
+  args = parser.parse_args(sys.argv[1:])
   if args.model_name is not None:
     attack_model_name = args.model_name
 
@@ -638,18 +638,16 @@ if __name__ == '__main__':
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
   agent.inner_agents[AgentType.Attack].compile(Adam(lr=0.001), metrics=['mean_squared_logarithmic_error'])
-  if len(sys.argv) > 2:
+  if args.model_name is not None:
     agent.inner_agents[AgentType.Attack].load_weights(attack_model_name)
-  if os.path.exists(attack_model.modelName):
-    agent.inner_agents[AgentType.Attack].load_weights(attack_model.modelName)
 
   hexagon_ui_api.run_in_background()
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
-  elif args.train:
+  elif args.what == 'train':
     agent.fit(env, nb_steps=300 * 1000, visualize=False, verbose=2, interim_filenames={AgentType.Attack: attack_model.modelName})
     agent.save_weights({AgentType.BoostDecision: dec_model.modelName, AgentType.Attack: attack_model.modelName}, overwrite=True)
-  elif args.test:
-    agent.test(env, nb_episodes=1000)
+  elif args.what == 'test':
+    agent.test(env, nb_episodes=args.testrounds)
   else:
     print('argument not recognised: ' + sys.argv[1])
