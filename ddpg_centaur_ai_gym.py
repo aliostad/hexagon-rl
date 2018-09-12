@@ -166,7 +166,7 @@ class SuperCentaurPlayer(Aliostad):
       self.illegal_move_reward_by_agents[AgentType.Attack] = EnvDef.CANT_ATTACK_MOVE_REWARD
       print('{} - illegal move (cant attack): {}'.format(world.round_no, cellId))
       return None
-    print ('{} - legal!!'.format(world.round_no))
+    #print ('{} - legal!!'.format(world.round_no))
     return cellId
 
 # __________________________________________________________________________________________________________________________
