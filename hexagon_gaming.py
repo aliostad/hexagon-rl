@@ -165,9 +165,9 @@ class Game:
   def run_sync(self):
     self.round_no += 1
     idx = np.random.permutation(np.arange(len(self.real_players)))
+    moves = []
     for i in idx:
       p = self.real_players[i]
-      moves = []
       try:
         infos = self.board.get_cell_infos_for_player(p.name)
         view = PlayerView(self.round_no, infos)
@@ -177,12 +177,11 @@ class Game:
             moves.append((p, mv))
       except Exception as e:
         print('Error in move {} for player {}: {}'.format(self.round_no, p.name, e.message))
-      for t in moves:
-        (p, mv) = t
-        success, errormsg = self.board.try_transfer(mv)
-        if not success:
-          pass
-          print('Move {} from player {} illegal: {}'.format(self.round_no, p.name, errormsg))
+    for t in moves:
+      (p, mv) = t
+      success, errormsg = self.board.try_transfer(mv)
+      if not success:
+        print('Move {} from player {} illegal: {}'.format(self.round_no, p.name, errormsg))
 
     # OK now increment
     self.board.increment_resources()

@@ -143,7 +143,7 @@ class World:
             dic[n.id] = 1
     return dic
 
-  def __init__(self, cells):
+  def __init__(self, cells, round_no):
     """
 
     :type cells: list of CellInfo
@@ -157,6 +157,7 @@ class World:
     self.noneCounts = self.getOfType(None)
     self.neighbourhoodCounts = self.buildNeighbourhood()
     self.neighbourhoodNonOwnCounts = self.buildNonOwnsNeighbourhood()
+    self.round_no = round_no
 
     for cid in self.uberCells:
       self.uberCells[cid].calculateDepth2()
@@ -286,7 +287,7 @@ class Aliostad(Player):
       self.history.append(TurnStat(Strategy.Expand))
 
     self.round_no += 1
-    world = World(cells)
+    world = World(cells, self.round_no)
     return world
 
   def turnx(self, world):

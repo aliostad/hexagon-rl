@@ -1,11 +1,11 @@
-from keras import Input, Model
-from keras.layers import Flatten, Conv2D, Concatenate
+from keras import Input, Model, Sequential
+from keras.layers import Flatten, Conv2D, Concatenate, Dense, Activation
 from keras.optimizers import Adam
 from rl.agents import DDPGAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
 from rl.policy import EpsGreedyQPolicy
 
-from centaur import *
+from hexagon_agent import *
 from random import shuffle
 from multi_agent import *
 import sys
@@ -127,7 +127,6 @@ class AgentType:
   Attack = 'Attack'
   Boost = 'Boost'
 
-
 # __________________________________________________________________________________________________________________________
 class SuperCentaurPlayer(Aliostad):
   def __init__(self, name, boost_likelihood=0.23):
@@ -141,7 +140,7 @@ class SuperCentaurPlayer(Aliostad):
     self.was_called = {}
     self.illegal_move_reward_by_agents = {}
 
-  def timeForBoost_xx(self, world):
+  def timeForBoost(self, world):
     """
 
     :type world: World
@@ -154,21 +153,20 @@ class SuperCentaurPlayer(Aliostad):
     return isTimeForBoost
 
   def move(self, playerView):
-    mv = self.current_move
-    return mv
+    return self.current_move
 
-  def getAttackFromCellId_xx(self, world):
+  def getAttackFromCellId(self, world):
     self.was_called[AgentType.Attack] = True
     cellId = self.actions[AgentType.Attack]
     if cellId not in world.uberCells:
       self.illegal_move_reward_by_agents[AgentType.Attack] = EnvDef.DONT_OWN_MOVE_REWARD
-      print('illegal move (dont own): {}'.format(cellId))
+      print('{} - illegal move (dont own): {}'.format(world.round_no, cellId))
       return None
     if not world.uberCells[cellId].canAttackOrExpand:
       self.illegal_move_reward_by_agents[AgentType.Attack] = EnvDef.CANT_ATTACK_MOVE_REWARD
-      print('illegal move (cant attack): {}'.format(cellId))
+      print('{} - illegal move (cant attack): {}'.format(world.round_no, cellId))
       return None
-    print ('legal!!')
+    print ('{} - legal!!'.format(world.round_no))
     return cellId
 
 # __________________________________________________________________________________________________________________________
@@ -200,7 +198,6 @@ class HierarchicalCentaurEnv(Env):
   def step(self, actions):
     for name in actions:
       self.centaur.actions[name] = actions[name]  # we can also deep copy
-
     self.centaur.current_move = self.centaur.movex(self.world)
     stats, isFinished , extraInfo = self.game.run_sync()
     info = self.game.board.get_cell_infos_for_player(EnvDef.centaur_name)
@@ -257,7 +254,7 @@ class HierarchicalCentaurEnv(Env):
 
     self.shortMemory = []
     for i in range(0, EnvDef.SHORT_MEMORY_SIZE):
-      self.shortMemory.append(World([]))
+      self.shortMemory.append(World([], 0))
 
     self.centaur = SuperCentaurPlayer(EnvDef.centaur_name, boost_likelihood=self.centaur_boost_likelihood)
     self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
