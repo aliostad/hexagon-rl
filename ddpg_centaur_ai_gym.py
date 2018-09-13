@@ -70,8 +70,12 @@ class NoneZeroEpsGreedyQPolicy(EpsGreedyQPolicy):
       for i in range(0, nb_actions):
         copy_q_values[i] *= np.random.uniform()
       action = np.argmax(copy_q_values)
+      if action == 0:  # there was only one possible value
+        action = idx  # make it same old
     else:
       action = np.argmax(copy_q_values)
+    if action == 0:
+      x = 1
     return action
 
   def get_config(self):
@@ -129,10 +133,12 @@ class AgentType:
 
 # __________________________________________________________________________________________________________________________
 class SuperCentaurPlayer(Aliostad):
-  def __init__(self, name, boost_likelihood=0.23):
+  def __init__(self, name, boost_likelihood=0.23, boosting_off=False, attack_off=False):
     Aliostad.__init__(self, name)
     self.reset_state()
     self.boost_likelihood = boost_likelihood
+    self.boosting_off = boosting_off
+    self.attack_off = attack_off
 
   def reset_state(self):
     self.actions = {}
@@ -146,6 +152,9 @@ class SuperCentaurPlayer(Aliostad):
     :type world: World
     :return:
     """
+    if self.boosting_off:
+      return Aliostad.timeForBoost(self, world)
+
     #self.was_called[AgentType.BoostDecision] = True
     #return self.actions[AgentType.BoostDecision] == 1
     isTimeForBoost = np.random.uniform() < self.boost_likelihood
@@ -156,6 +165,9 @@ class SuperCentaurPlayer(Aliostad):
     return self.current_move
 
   def getAttackFromCellId(self, world):
+    if self.attack_off:
+      return Aliostad.getAttackFromCellId(self, world)
+
     self.was_called[AgentType.Attack] = True
     cellId = self.actions[AgentType.Attack]
     if cellId not in world.uberCells:
@@ -595,6 +607,8 @@ if __name__ == '__main__':
   parser.add_argument('--model_name', '-m', help="model name", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
   parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool, nargs='?', const=True)
+  parser.add_argument('--boostingoff', '-y', help="don't use boosting method of centaur", type=bool, nargs='?', const=True)
+  parser.add_argument('--attackoff', '-z', help="dont use attack method of centaur", type=bool, nargs='?', const=False)
   parser.add_argument('--testrounds', '-t', help="number of epochs when testing", type=int, default=100)
   parser.add_argument('--centaur_boost_likelihood', '-b', help="likelihood of random boost for centaur", type=float, default=0.23)
 

@@ -250,8 +250,6 @@ class Aliostad(Player):
       return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
     cellTo = srt2[0]
 
-    if cellFrom.resources <= cellTo.resources:
-      x = 1
     assert cellFrom.resources > cellTo.resources, 'resources: from: {} - to: {}'.format(cellFrom.resources, cellTo.resources)
 
     amount = cellTo.resources + ((cellFrom.resources - cellTo.resources) * 70 / 100)
