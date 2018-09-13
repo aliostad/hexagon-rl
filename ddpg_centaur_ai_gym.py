@@ -611,8 +611,10 @@ if __name__ == '__main__':
   parser.add_argument('--model_name', '-m', help="model name", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
   parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool, nargs='?', const=True)
-  parser.add_argument('--boostingoff', '-y', help="don't use boosting method of centaur", type=bool, nargs='?', const=True)
-  parser.add_argument('--attackoff', '-z', help="dont use attack method of centaur", type=bool, nargs='?', const=False)
+  parser.add_argument('--boostingoff', '-y', help="don't use boosting method of centaur",
+                      type=bool, nargs='?', const=True, default=True)
+  parser.add_argument('--attackoff', '-z', help="dont use attack method of centaur",
+                      type=bool, nargs='?', const=False, default=False)
   parser.add_argument('--testrounds', '-t', help="number of epochs when testing", type=int, default=100)
   parser.add_argument('--centaur_boost_likelihood', '-b', help="likelihood of random boost for centaur", type=float, default=0.23)
 
