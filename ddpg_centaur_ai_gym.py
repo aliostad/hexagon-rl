@@ -183,7 +183,9 @@ class SuperCentaurPlayer(Aliostad):
 
 # __________________________________________________________________________________________________________________________
 class HierarchicalCentaurEnv(Env):
-  def __init__(self, centaur_boost_likelihood, opponent_randomness=None):
+  def __init__(self, centaur_boost_likelihood, opponent_randomness=None, boosting_off=False, attack_off=False):
+    self.boosting_off = boosting_off
+    self.attack_off = attack_off
     self.opponent_randomness = opponent_randomness
     self.players = []
     self.game = None
@@ -268,7 +270,9 @@ class HierarchicalCentaurEnv(Env):
     for i in range(0, EnvDef.SHORT_MEMORY_SIZE):
       self.shortMemory.append(World([], 0))
 
-    self.centaur = SuperCentaurPlayer(EnvDef.centaur_name, boost_likelihood=self.centaur_boost_likelihood)
+    self.centaur = SuperCentaurPlayer(EnvDef.centaur_name,
+                      boost_likelihood=self.centaur_boost_likelihood,
+                      attack_off=self.attack_off, boosting_off=self.boosting_off)
     self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
     shuffle(self.players)
     self.game = Game(EnvDef.game_name, self.players, radius=5)
@@ -622,7 +626,9 @@ if __name__ == '__main__':
   if args.randomness is not None:
     randomness = args.randomness
 
-  env = HierarchicalCentaurEnv(opponent_randomness=randomness, centaur_boost_likelihood=args.centaur_boost_likelihood)
+  env = HierarchicalCentaurEnv(opponent_randomness=randomness,
+                               centaur_boost_likelihood=args.centaur_boost_likelihood,
+                               boosting_off=args.boostingoff, attack_off=attackoff)
   np.random.seed(42)
   env.seed(42)
 
