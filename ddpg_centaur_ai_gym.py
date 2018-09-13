@@ -65,7 +65,7 @@ class NoneZeroEpsGreedyQPolicy(EpsGreedyQPolicy):
       if copy_q_values[i] == 0:
         copy_q_values[i] = -1e9
     if np.random.uniform() < self.eps:
-      idx = np.argmax(q_values)
+      idx = np.argmax(copy_q_values)
       copy_q_values[idx] = 0
       for i in range(0, nb_actions):
         copy_q_values[i] *= np.random.uniform()
