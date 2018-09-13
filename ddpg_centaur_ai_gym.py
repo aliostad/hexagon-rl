@@ -628,7 +628,7 @@ if __name__ == '__main__':
 
   env = HierarchicalCentaurEnv(opponent_randomness=randomness,
                                centaur_boost_likelihood=args.centaur_boost_likelihood,
-                               boosting_off=args.boostingoff, attack_off=attackoff)
+                               boosting_off=args.boostingoff, attack_off=args.attackoff)
   np.random.seed(42)
   env.seed(42)
 
