@@ -65,4 +65,4 @@ if __name__ == '__main__':
                    observation_shape=(NUM_STATE, ), processor=PpoProcessor())
   env = gym.make(ENV)
   env.render()
-  agent.fit(env, 10000, visualize=True)
+  agent.fit(env, 10000, visualize=True, verbose=1)
