@@ -6,6 +6,19 @@ from noisy_dense import NoisyDense
 
 from ppo import *
 
+LR = 3e-4
+#ENV = 'Breakout-ram-v0'
+ENV = 'LunarLander-v2'
+EPISODES = 1000000
+
+LOSS_CLIPPING = 0.2  # Only implemented clipping for the surrogate loss, paper said it was best
+EPOCHS = 10
+
+GAMMA = 0.99
+
+BATCH_SIZE = 128
+NUM_ACTIONS = 4
+NUM_STATE = 8
 
 def build_actor():
   state_input = Input(shape=(NUM_STATE,))
@@ -20,7 +33,7 @@ def build_actor():
   out_actions = NoisyDense(NUM_ACTIONS, activation='softmax', sigma_init=0.02, name='output')(x)
 
   model = Model(inputs=[state_input, actual_value, predicted_value, old_prediction], outputs=[out_actions])
-  model.compile(optimizer=Adam(lr=10e-4),
+  model.compile(optimizer=Adam(lr=LR),
                 loss=[PPOAgent.proximal_policy_optimization_loss(
                   actual_value=actual_value,
                   old_prediction=old_prediction,
@@ -38,31 +51,13 @@ def build_critic():
   out_value = Dense(1)(x)
 
   model = Model(inputs=[state_input], outputs=[out_value])
-  model.compile(optimizer=Adam(lr=10e-4), loss='mse')
+  model.compile(optimizer=Adam(lr=LR), loss='mse')
 
   return model
 
-class PpoProcessor(Processor):
-  def process_action(self, action):
-    return np.argmax(action)
-
-#ENV = 'Breakout-ram-v0'
-ENV = 'LunarLander-v2'
-
-EPISODES = 10000
-
-LOSS_CLIPPING = 0.2 # Only implemented clipping for the surrogate loss, paper said it was best
-EPOCHS = 10
-
-GAMMA = 0.99
-
-BATCH_SIZE = 512
-NUM_ACTIONS = 4
-NUM_STATE = 8
-
 if __name__ == '__main__':
-  agent = PPOAgent(NUM_ACTIONS, build_actor(), build_critic(), EpisodicMemory(10000, GAMMA),
-                   observation_shape=(NUM_STATE, ), processor=PpoProcessor())
+  agent = PPOAgent(NUM_ACTIONS, build_actor(), build_critic(), EpisodicMemory(100000, GAMMA),
+                   observation_shape=(NUM_STATE, ),
+                   train_interval=32, batch_size=BATCH_SIZE)
   env = gym.make(ENV)
-  env.render()
-  agent.fit(env, 10000, visualize=True, verbose=1)
+  agent.fit(env, EPISODES, visualize=True, verbose=2)

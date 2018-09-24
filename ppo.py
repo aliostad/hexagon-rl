@@ -6,7 +6,7 @@ class PPOAgent(Agent):
 
   def __init__(self, nb_actions, actor, critic, memory, observation_shape,
                gamma=.99, batch_size=32, nb_steps_warmup=100,
-               train_interval=1, memory_interval=1, custom_model_objects={}, target_model_update=.001,
+               train_interval=None, memory_interval=1, target_model_update=.001,
                masker=None, training_epochs=10, **kwargs):
     super(PPOAgent, self).__init__(**kwargs)
 
@@ -16,9 +16,8 @@ class PPOAgent(Agent):
     self.gamma = gamma
     self.target_model_update = target_model_update
     self.batch_size = batch_size
-    self.train_interval = train_interval
+    self.train_interval = batch_size if train_interval is None else train_interval
     self.memory_interval = memory_interval
-    self.custom_model_objects = custom_model_objects
     self.observation_shape = observation_shape
     self.training_epochs = training_epochs
 
@@ -36,6 +35,8 @@ class PPOAgent(Agent):
     self.last_masked_raw_action = None
     self.last_raw_action = None
     self.last_observation = None
+    self.last_one_hot_action = None
+    self.rewards_over_time = []
 
   def compile(self, optimizer, metrics=[]):
     raise Exception('Not supporting compilation. Please ensure actor and critic are compiled')
@@ -61,26 +62,33 @@ class PPOAgent(Agent):
     :return:
     """
 
-    raw_action = self.actor.predict([ state.reshape((1,) + state.shape),
+    raw_action = self.actor.predict([state.reshape((1,) + state.shape),
                             self.dummy_value, self.dummy_value, self.dummy_action])[0]
     masked_raw_action = raw_action if self.masker is None else self.masker.mask(raw_action)
-    return masked_raw_action, raw_action
+    the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
+    one_hot_action = np.zeros(self.nb_actions)
+    one_hot_action[the_choice] = 1.
+    return masked_raw_action, raw_action, one_hot_action
 
   def forward(self, observation):
     self.last_observation = observation
-    masked_raw_action, raw_action = self.select_action(observation)
+    masked_raw_action, raw_action, one_hot_action = self.select_action(observation)
     self.last_raw_action = raw_action
     self.last_masked_raw_action = masked_raw_action
-    return masked_raw_action
+    self.last_one_hot_action = one_hot_action
+    return np.argmax(one_hot_action)
 
   def backward(self, reward, terminal):
     self.memory.append(self.last_observation,
-                       self.last_masked_raw_action, reward, terminal,
+                       self.last_one_hot_action, reward, terminal,
                        training=self.training,
                        pred_action=self.last_raw_action)
 
-    if self.training and self.step > self.nb_steps_warmup:
+    if self.training and self.step > self.nb_steps_warmup and self.step % self.train_interval == 0:
       self._run_training()
+    if terminal:
+      self.rewards_over_time.append(reward)
+      return [reward]
     return []
 
   def _run_training(self):
@@ -90,12 +98,11 @@ class PPOAgent(Agent):
       observations.append(e.observation)
       actions.append(e.action)
       pred_actions.append(e.pred_action)
-      rewards.append(e.discounted_reward)
+      rewards.append([e.discounted_reward])
     observations = np.array(observations)
     actions = np.array(actions)
     pred_actions = np.array(pred_actions)
     rewards = np.array(rewards)
-    old_prediction = pred_actions
     pred_values = self.critic.predict(observations)
     for e in range(self.training_epochs):
       self.actor.train_on_batch([observations, rewards, pred_values, pred_actions], [actions])
