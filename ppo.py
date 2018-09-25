@@ -2,12 +2,16 @@ from rl.core import *
 from episodic_memory import *
 from keras import backend as K
 
+
+
 class PPOAgent(Agent):
+
+  loss_clipping = 0.3
 
   def __init__(self, nb_actions, actor, critic, memory, observation_shape,
                gamma=.99, batch_size=32, nb_steps_warmup=100,
                train_interval=None, memory_interval=1, target_model_update=.001,
-               masker=None, training_epochs=10, **kwargs):
+               masker=None, training_epochs=10, train_on_last_episode=False, **kwargs):
     super(PPOAgent, self).__init__(**kwargs)
 
     # Parameters.
@@ -20,6 +24,7 @@ class PPOAgent(Agent):
     self.memory_interval = memory_interval
     self.observation_shape = observation_shape
     self.training_epochs = training_epochs
+    self.train_on_last_episode = train_on_last_episode
 
     # Related objects.
     self.actor = actor
@@ -84,8 +89,11 @@ class PPOAgent(Agent):
                        training=self.training,
                        pred_action=self.last_raw_action)
 
-    if self.training and self.step > self.nb_steps_warmup and self.step % self.train_interval == 0:
+    if self.training and self.train_on_last_episode and terminal:
       self._run_training()
+    elif self.training and self.step > self.nb_steps_warmup and self.step % self.train_interval == 0:
+      self._run_training()
+
     if terminal:
       self.rewards_over_time.append(reward)
       return [reward]
@@ -119,6 +127,8 @@ class PPOAgent(Agent):
       r = prob / (old_prob + 1e-10)
 
       return -K.log(prob + 1e-10) * K.mean(
-        K.minimum(r * advantage, K.clip(r, min_value=0.8, max_value=1.2) * advantage))
+        K.minimum(r * advantage, K.clip(r,
+                                        min_value=1.-PPOAgent.loss_clipping,
+                                        max_value=1.+PPOAgent.loss_clipping) * advantage))
 
     return loss

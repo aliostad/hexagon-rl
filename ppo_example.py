@@ -6,7 +6,7 @@ from noisy_dense import NoisyDense
 
 from ppo import *
 
-LR = 3e-4
+LR = 3e-5
 #ENV = 'Breakout-ram-v0'
 ENV = 'LunarLander-v2'
 EPISODES = 1000000
@@ -16,9 +16,10 @@ EPOCHS = 10
 
 GAMMA = 0.99
 
-BATCH_SIZE = 128
+BATCH_SIZE = 256
 NUM_ACTIONS = 4
 NUM_STATE = 8
+ONLY_LAST_EPISODE=False
 
 def build_actor():
   state_input = Input(shape=(NUM_STATE,))
@@ -56,8 +57,9 @@ def build_critic():
   return model
 
 if __name__ == '__main__':
-  agent = PPOAgent(NUM_ACTIONS, build_actor(), build_critic(), EpisodicMemory(100000, GAMMA),
-                   observation_shape=(NUM_STATE, ),
+  agent = PPOAgent(NUM_ACTIONS, build_actor(), build_critic(),
+                   EpisodicMemory(100000, GAMMA, only_last_episode=ONLY_LAST_EPISODE),
+                   observation_shape=(NUM_STATE, ), train_on_last_episode=ONLY_LAST_EPISODE,
                    train_interval=32, batch_size=BATCH_SIZE)
   env = gym.make(ENV)
   agent.fit(env, EPISODES, visualize=True, verbose=2)

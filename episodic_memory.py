@@ -39,12 +39,14 @@ class Episode:
 
 class EpisodicMemory(Memory):
   def __init__(self, experience_window_length, reward_decay_gamma=0.99,
-               good_episodes_window=100, **kwargs):
+               good_episodes_window=100, only_last_episode=False, **kwargs):
     super(EpisodicMemory, self).__init__(window_length=experience_window_length, **kwargs)
     self.current_episode = Episode(reward_decay_gamma)
     self.gamma = reward_decay_gamma
     self.steps = deque(maxlen=experience_window_length)
     self.good_episodes = deque(maxlen=good_episodes_window)
+    self.only_last_episode = only_last_episode
+    self.last_episode = None
 
   def manage_finished_episode(self, episode):
     """
@@ -67,6 +69,10 @@ class EpisodicMemory(Memory):
     :return:
     """
     assert len(self.steps) > 0, 'Not finished episodes. Consider increasing warmup time'
+    if self.only_last_episode:
+      assert self.last_episode is not None, 'Last episode is None. Make sure at least one episode finished.'
+      return self.last_episode.steps
+
     if batch_idxs is None:
       batch_idxs = np.random.permutation(len(self.steps))
     experiences = []
@@ -95,4 +101,5 @@ class EpisodicMemory(Memory):
     self.current_episode.append(step, training)
     if terminal:
       self.steps.extend(self.current_episode.steps)
+      self.last_episode = self.current_episode
       self.current_episode = Episode(self.gamma)
