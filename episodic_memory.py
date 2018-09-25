@@ -37,7 +37,6 @@ class Episode:
       for i, s in enumerate(self.steps):
         for j in range(i+1, n):
           s.discounted_reward += self.steps[i].reward * (self.gamma ** j)  # I think it must be self.gamma ** (n-j) but other impl had just j
-      return None
 
 
 
