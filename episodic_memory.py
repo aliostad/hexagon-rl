@@ -1,6 +1,7 @@
 from rl.memory import Memory
 from collections import deque
 import numpy as np
+import math
 
 class EpisodeStep:
   def __init__(self, observation, action, reward, terminal, pred_action=None):
@@ -17,7 +18,6 @@ class Episode:
     self.total_reward = 0.
     self.is_closed = False
     self.gamma = gamma
-    self.reward = -1e8
 
   def append(self, step, training=True):
     """
@@ -29,13 +29,17 @@ class Episode:
     assert self.is_closed == False, 'Cannot append to a closed episode'
     self.total_reward += step.reward
     self.steps.append(step)
+    n = len(self.steps)
+
     if step.terminal:
       self.is_closed = True
-    n = len(self.steps)
-    for i, s in enumerate(self.steps):
-      if i < n - 1:
-        s.discounted_reward += step.reward * (self.gamma ** (n - i - 1))
-    self.reward = self.steps[-1].reward
+      n = len(self.steps)
+      for i, s in enumerate(self.steps):
+        for j in range(i+1, n):
+          s.discounted_reward += self.steps[i].reward * (self.gamma ** j)  # I think it must be self.gamma ** (n-j) but other impl had just j
+      return None
+
+
 
 class EpisodicMemory(Memory):
   def __init__(self, experience_window_length, reward_decay_gamma=0.99,

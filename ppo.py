@@ -1,12 +1,12 @@
 from rl.core import *
 from episodic_memory import *
 from keras import backend as K
-
+import math
 
 
 class PPOAgent(Agent):
 
-  loss_clipping = 0.3
+  loss_clipping = 0.2
 
   def __init__(self, nb_actions, actor, critic, memory, observation_shape,
                gamma=.99, batch_size=32, nb_steps_warmup=100,
@@ -70,6 +70,8 @@ class PPOAgent(Agent):
     raw_action = self.actor.predict([state.reshape((1,) + state.shape),
                             self.dummy_value, self.dummy_value, self.dummy_action])[0]
     masked_raw_action = raw_action if self.masker is None else self.masker.mask(raw_action)
+    if math.isnan(sum(masked_raw_action)):
+      print ''
     the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
     one_hot_action = np.zeros(self.nb_actions)
     one_hot_action[the_choice] = 1.
@@ -95,7 +97,13 @@ class PPOAgent(Agent):
       self._run_training()
 
     if terminal:
-      self.rewards_over_time.append(reward)
+      self.rewards_over_time.append(self.memory.last_episode.total_reward)  # dodgey. Call beyond interface
+      if len(self.rewards_over_time) % 10 == 0:
+        print('Average Reward - Last 10:{}\tLast 100:{}\tLast 1000:{}'.format(
+          np.average(self.rewards_over_time[-10:]),
+          np.average(self.rewards_over_time[-100:]),
+          np.average(self.rewards_over_time[-1000:])
+        ))
       return [reward]
     return []
 
