@@ -7,11 +7,13 @@ import math
 class PPOAgent(Agent):
 
   loss_clipping = 0.2
+  ENTROPY_LOSS = 5 * 1e-3
 
   def __init__(self, nb_actions, actor, critic, memory, observation_shape,
                gamma=.99, batch_size=32, nb_steps_warmup=100,
                train_interval=None, memory_interval=1, target_model_update=.001,
-               masker=None, training_epochs=10, train_on_last_episode=False, **kwargs):
+               masker=None, training_epochs=10, train_on_last_episode=False,
+               verbose=True, **kwargs):
     super(PPOAgent, self).__init__(**kwargs)
 
     # Parameters.
@@ -25,6 +27,7 @@ class PPOAgent(Agent):
     self.observation_shape = observation_shape
     self.training_epochs = training_epochs
     self.train_on_last_episode = train_on_last_episode
+    self.verbose = verbose
 
     # Related objects.
     self.actor = actor
@@ -70,8 +73,6 @@ class PPOAgent(Agent):
     raw_action = self.actor.predict([state.reshape((1,) + state.shape),
                             self.dummy_value, self.dummy_value, self.dummy_action])[0]
     masked_raw_action = raw_action if self.masker is None else self.masker.mask(raw_action)
-    if math.isnan(sum(masked_raw_action)):
-      print ''
     the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
     one_hot_action = np.zeros(self.nb_actions)
     one_hot_action[the_choice] = 1.
@@ -98,13 +99,12 @@ class PPOAgent(Agent):
 
     if terminal:
       self.rewards_over_time.append(self.memory.last_episode.total_reward)  # dodgey. Call beyond interface
-      if len(self.rewards_over_time) % 10 == 0:
+      if self.verbose and len(self.rewards_over_time) % 10 == 0:
         print('Average Reward - Last 10:{}\tLast 100:{}\tLast 1000:{}'.format(
           np.average(self.rewards_over_time[-10:]),
           np.average(self.rewards_over_time[-100:]),
           np.average(self.rewards_over_time[-1000:])
         ))
-      return [reward]
     return []
 
   def _run_training(self):
@@ -127,14 +127,15 @@ class PPOAgent(Agent):
 
   @staticmethod
   def proximal_policy_optimization_loss(actual_value, predicted_value, old_prediction):
+    EPSILON = 1e-10
     advantage = actual_value - predicted_value
 
     def loss(y_true, y_pred):
       prob = K.sum(y_true * y_pred)
       old_prob = K.sum(y_true * old_prediction)
-      r = prob / (old_prob + 1e-10)
+      r = prob / (old_prob + EPSILON)
 
-      return -K.log(prob + 1e-10) * K.mean(
+      return (prob * -K.log(prob + EPSILON) * PPOAgent.ENTROPY_LOSS) + K.mean(
         K.minimum(r * advantage, K.clip(r,
                                         min_value=1.-PPOAgent.loss_clipping,
                                         max_value=1.+PPOAgent.loss_clipping) * advantage))

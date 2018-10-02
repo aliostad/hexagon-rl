@@ -1,9 +1,7 @@
 from keras import Input, Model, Sequential
 from keras.layers import Flatten, Conv2D, Concatenate, Dense, Activation
 from keras.optimizers import Adam
-from rl.agents import DDPGAgent, CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
-from rl.policy import EpsGreedyQPolicy
 
 from hexagon_agent import *
 from random import shuffle
@@ -15,7 +13,8 @@ from square_grid import *
 import numpy as np
 import warnings
 import argparse
-
+from ppo import PPOAgent
+from episodic_memory import EpisodicMemory
 # ______________________________________________________________________________________________________________________________
 class EnvDef:
   centaur_name = 'centaur'
@@ -35,94 +34,6 @@ class EnvDef:
   CANT_ATTACK_MOVE_REWARD = -3
 
 # __________________________________________________________________________________________________________________________
-
-class NoneZeroEpsGreedyQPolicy(EpsGreedyQPolicy):
-  """Implement the epsilon greedy policy
-
-  Eps Greedy policy either:
-
-  - takes a random action with probability epsilon from Non-Zero Q-values
-  - takes current best action with prob (1 - epsilon)
-  """
-
-  def __init__(self, eps=.1):
-    super(EpsGreedyQPolicy, self).__init__()
-    self.eps = eps
-
-  def select_action(self, q_values):
-    """Return the selected action
-
-    # Arguments
-        q_values (np.ndarray): List of the estimations of Q for each action
-
-    # Returns
-        Selection action
-    """
-    assert q_values.ndim == 1
-    nb_actions = q_values.shape[0]
-    copy_q_values = np.copy(q_values)
-    for i in range(0, nb_actions):
-      if copy_q_values[i] == 0:
-        copy_q_values[i] = -1e9
-    if np.random.uniform() < self.eps:
-      idx = np.argmax(copy_q_values)
-      copy_q_values[idx] = 0
-      for i in range(0, nb_actions):
-        copy_q_values[i] *= np.random.uniform()
-      action = np.argmax(copy_q_values)
-      if action == 0:  # there was only one possible value
-        action = idx  # make it same old
-    else:
-      action = np.argmax(copy_q_values)
-    if action == 0:
-      x = 1
-    return action
-
-  def get_config(self):
-    """Return configurations of EpsGreedyPolicy
-
-    # Returns
-        Dict of config
-    """
-    config = super(EpsGreedyQPolicy, self).get_config()
-    config['eps'] = self.eps
-    return config
-
-
-# __________________________________________________________________________________________________________________________
-
-class MaskableDDPGAgent(DDPGAgent):
-
-  def __init__(self, nb_actions, actor, critic, critic_action_input, memory,
-               gamma=.99, batch_size=32, nb_steps_warmup_critic=1000, nb_steps_warmup_actor=1000,
-               train_interval=1, memory_interval=1, delta_range=None, delta_clip=np.inf,
-               random_process=None, custom_model_objects={}, target_model_update=.001,
-               mask_processor=None, **kwargs):
-
-    DDPGAgent.__init__(self, nb_actions=nb_actions, actor=actor, critic=critic,
-                       critic_action_input=critic_action_input, memory=memory,
-                       gamma=gamma, batch_size=batch_size, nb_steps_warmup_critic=nb_steps_warmup_critic,
-                       nb_steps_warmup_actor=nb_steps_warmup_actor,train_interval=train_interval,
-                       memory_interval=memory_interval, delta_range=delta_range, delta_clip=delta_clip,
-                       random_process=random_process, custom_model_objects=custom_model_objects,
-                       target_model_update=target_model_update, **kwargs)
-
-    self.mask_processor = mask_processor
-
-  def forward(self, observation):
-    # Select an action.
-    state = self.memory.get_recent_state(observation)
-    action = self.select_action(state)  # TODO: move this into policy
-
-    if self.mask_processor is not None:
-      action = self.mask_processor.mask(action)
-
-    # Book-keeping.
-    self.recent_observation = observation
-    self.recent_action = action
-
-    return action
-
 
 # __________________________________________________________________________________________________________________________
 
@@ -522,12 +433,18 @@ class DecisionModel:
 
 
 class AttackModel:
+
   def __init__(self, modelName=None):
     """
 
     :type theMethod: str
     """
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000000))
+
+    state_input = Input(shape=(NUM_STATE,))
+    actual_value = Input(shape=(1,))
+    predicted_value = Input(shape=(1,))
+    old_prediction = Input(shape=(NUM_ACTIONS,))
 
     model = Sequential()
     model.add(Conv2D(128, (5, 5), padding='same', activation='relu',
@@ -540,6 +457,8 @@ class AttackModel:
     model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
 
     self.model = model
+
+    self.critic_model = Model()
 
     action_input = Input(shape=EnvDef.SPATIAL_OUTPUT, name='action_input')
     observation_input = Input(shape=EnvDef.SPATIAL_INPUT + (1, ), name='observation_input')
@@ -640,13 +559,12 @@ if __name__ == '__main__':
 
   prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor(random_action=args.randomaction)})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
-  decision_agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
+  decision_agent = P(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
                             batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
 
   decision_agent.compile()
-  memory2 = SequentialMemory(limit=100000, window_length=1)
-  policy = NoneZeroEpsGreedyQPolicy()
-  attack_agent = MaskableDDPGAgent(nb_actions=EnvDef.SPATIAL_OUTPUT[0],
+  memory2 = EpisodicMemory(experience_window_length=100000)
+  attack_agent = PPOAgent(nb_actions=EnvDef.SPATIAL_OUTPUT[0],
                                    actor=attack_model.model,
                                    processor=prc.inner_processors[AgentType.Attack],
                                    critic=attack_model.get_critic(),

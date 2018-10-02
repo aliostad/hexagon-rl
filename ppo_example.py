@@ -1,6 +1,6 @@
 from keras import Input, Model
 from keras.layers import Dense
-from keras.optimizers import Adam
+from keras.optimizers import Adam, SGD
 import gym
 from noisy_dense import NoisyDense
 
@@ -34,7 +34,7 @@ def build_actor():
   out_actions = NoisyDense(NUM_ACTIONS, activation='softmax', sigma_init=0.02, name='output')(x)
 
   model = Model(inputs=[state_input, actual_value, predicted_value, old_prediction], outputs=[out_actions])
-  model.compile(optimizer=Adam(lr=LR),
+  model.compile(optimizer=SGD(lr=LR),
                 loss=[PPOAgent.proximal_policy_optimization_loss(
                   actual_value=actual_value,
                   old_prediction=old_prediction,
@@ -52,7 +52,7 @@ def build_critic():
   out_value = Dense(1)(x)
 
   model = Model(inputs=[state_input], outputs=[out_value])
-  model.compile(optimizer=Adam(lr=LR), loss='mse')
+  model.compile(optimizer=SGD(lr=LR), loss='mse')
 
   return model
 
@@ -62,4 +62,4 @@ if __name__ == '__main__':
                    observation_shape=(NUM_STATE, ), train_on_last_episode=ONLY_LAST_EPISODE,
                    train_interval=32, batch_size=BATCH_SIZE)
   env = gym.make(ENV)
-  agent.fit(env, EPISODES, visualize=True, verbose=2)
+  agent.fit(env, EPISODES, visualize=True, verbose=1)
