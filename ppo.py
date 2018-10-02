@@ -3,6 +3,7 @@ from episodic_memory import *
 from keras import backend as K
 import math
 
+EPSILON = 1e-10
 
 class PPOAgent(Agent):
 
@@ -71,7 +72,7 @@ class PPOAgent(Agent):
     """
 
     raw_action = self.actor.predict([state.reshape((1,) + state.shape),
-                            self.dummy_value, self.dummy_value, self.dummy_action])[0]
+                            self.dummy_value, self.dummy_action])[0]
     masked_raw_action = raw_action if self.masker is None else self.masker.mask(raw_action)
     the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
     one_hot_action = np.zeros(self.nb_actions)
@@ -120,15 +121,15 @@ class PPOAgent(Agent):
     pred_actions = np.array(pred_actions)
     rewards = np.array(rewards)
     pred_values = self.critic.predict(observations)
+    advantages = rewards - pred_values[0]
+    advantages = (advantages - advantages.mean()) / (advantages.std() + EPSILON)
     for e in range(self.training_epochs):
-      self.actor.train_on_batch([observations, rewards, pred_values, pred_actions], [actions])
+      self.actor.train_on_batch([observations, advantages, pred_actions], [actions])
     for e in range(self.training_epochs):
       self.critic.train_on_batch([observations], [rewards])
 
   @staticmethod
-  def proximal_policy_optimization_loss(actual_value, predicted_value, old_prediction):
-    EPSILON = 1e-10
-    advantage = actual_value - predicted_value
+  def proximal_policy_optimization_loss(advantage, old_prediction):
 
     def loss(y_true, y_pred):
       prob = K.sum(y_true * y_pred)

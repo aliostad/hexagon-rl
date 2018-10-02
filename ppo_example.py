@@ -23,8 +23,7 @@ ONLY_LAST_EPISODE=False
 
 def build_actor():
   state_input = Input(shape=(NUM_STATE,))
-  actual_value = Input(shape=(1,))
-  predicted_value = Input(shape=(1,))
+  advantage = Input(shape=(1,))
   old_prediction = Input(shape=(NUM_ACTIONS,))
 
   x = Dense(256, activation='relu')(state_input)
@@ -33,12 +32,11 @@ def build_actor():
   # Prefer this to entropy penalty
   out_actions = NoisyDense(NUM_ACTIONS, activation='softmax', sigma_init=0.02, name='output')(x)
 
-  model = Model(inputs=[state_input, actual_value, predicted_value, old_prediction], outputs=[out_actions])
+  model = Model(inputs=[state_input, advantage, old_prediction], outputs=[out_actions])
   model.compile(optimizer=SGD(lr=LR),
                 loss=[PPOAgent.proximal_policy_optimization_loss(
-                  actual_value=actual_value,
-                  old_prediction=old_prediction,
-                  predicted_value=predicted_value)])
+                  advantage=advantage,
+                  old_prediction=old_prediction)])
   model.summary()
 
   return model
