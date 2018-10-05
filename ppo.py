@@ -121,7 +121,7 @@ class PPOAgent(Agent):
     pred_actions = np.array(pred_actions)
     rewards = np.array(rewards)
     pred_values = self.critic.predict(observations)
-    advantages = rewards - pred_values[0]
+    advantages = rewards - pred_values
     advantages = (advantages - advantages.mean()) / (advantages.std() + EPSILON)
     for e in range(self.training_epochs):
       self.actor.train_on_batch([observations, advantages, pred_actions], [actions])

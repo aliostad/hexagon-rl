@@ -9,7 +9,7 @@ from ppo import *
 LR = 3e-5
 #ENV = 'Breakout-ram-v0'
 ENV = 'LunarLander-v2'
-EPISODES = 1000000
+EPISODES = 10000000
 
 LOSS_CLIPPING = 0.2  # Only implemented clipping for the surrogate loss, paper said it was best
 EPOCHS = 10
@@ -60,4 +60,4 @@ if __name__ == '__main__':
                    observation_shape=(NUM_STATE, ), train_on_last_episode=ONLY_LAST_EPISODE,
                    train_interval=32, batch_size=BATCH_SIZE)
   env = gym.make(ENV)
-  agent.fit(env, EPISODES, visualize=True, verbose=1)
+  agent.fit(env, EPISODES, visualize=False, verbose=0)
