@@ -1,6 +1,7 @@
 from keras import Input, Model, Sequential
 from keras.layers import Flatten, Conv2D, Concatenate, Dense, Activation, concatenate
 from keras.optimizers import Adam, SGD
+from rl.agents import CEMAgent
 from rl.memory import SequentialMemory, EpisodeParameterMemory
 
 from hexagon_agent import *
@@ -32,7 +33,7 @@ class EnvDef:
   MOVE_REWARD_MULTIPLIER = 10
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
-  LR = 0.001
+  LR = 0.01
 
 # __________________________________________________________________________________________________________________________
 
@@ -248,7 +249,6 @@ class CentaurAttackProcessor(Processor):
   def __init__(self, masking=True, random_action=False):
     self.masking = masking
     self.last_world = None
-    self.policy = NoneZeroEpsGreedyQPolicy()
     self.random_action = random_action
 
   def buildInput(self, world):
@@ -301,7 +301,7 @@ class CentaurAttackProcessor(Processor):
     :type action: int
     :return:
     """
-    idx = self.policy.select_action(action)
+    idx = action
     y = idx % EnvDef.SPATIAL_INPUT[1]
     x = idx / EnvDef.SPATIAL_INPUT[1]
     thid = GridCellId(x, y).transpose(-(EnvDef.SPATIAL_INPUT[0] / 2), -(EnvDef.SPATIAL_INPUT[1] / 2))
@@ -333,13 +333,22 @@ class CentaurAttackProcessor(Processor):
       return Y
     mask = self.buildOutput(self.last_world).flatten()
     assert mask.shape == Y.shape
-
+    mn = np.min(Y)
+    all_zeros = np.count_nonzero(Y) == 0
+    plus = (-mn*2) if mn < 0 else 0
     for i in range(0, len(Y)):
+      Y[i] += plus  # get rid of negative values
       if mask[i] == 0:
         Y[i] = 0
-      elif self.random_action:
+      elif self.random_action or all_zeros:  # in case of all_zero, choose random from mask
         Y[i] = np.random.uniform()
-    return Y
+    if Y.sum() == 0:
+      if mask.sum() == 0:
+        mask[0] = 1.
+      return mask
+    else:
+      Y /= Y.sum()  # normalise
+      return Y
 
   def process_and_mask(self, Y):
     """
@@ -442,7 +451,7 @@ class AttackModel:
     """
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000000))
 
-    state_input = Input(shape=(EnvDef.SPATIAL_INPUT + (1, ),))
+    state_input = Input(shape=(EnvDef.SPATIAL_INPUT + (1, )))
     advantage = Input(shape=(1,))
     old_prediction = Input(EnvDef.SPATIAL_OUTPUT)
 
@@ -456,23 +465,21 @@ class AttackModel:
     merged = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='relu')(merged)
     actor_output = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh')(merged)
     model = Model(inputs=[state_input, advantage, old_prediction], outputs=[actor_output])
-    model.compile(optimizer=SGD(lr=EnvDef.LR ),
+    model.compile(optimizer=Adam(lr=EnvDef.LR),
                   loss=[PPOAgent.proximal_policy_optimization_loss(
                     advantage=advantage,
                     old_prediction=old_prediction)])
 
     self.model = model
-
-    self.critic_model = Model()
-
-    critic = Model(inputs=[action_input, observation_input], outputs=x)
+    critic_input = Input(shape=(EnvDef.SPATIAL_INPUT + (1, )))
+    critic_path = Flatten()(critic_input)
+    critic_path = Dense(256, activation='relu')(critic_path)
+    critic_path = Dense(256, activation='relu')(critic_path)
+    critic_out = Dense(1)(critic_path)
+    critic = Model(inputs=[critic_input], outputs=[critic_out])
+    critic.compile(optimizer=Adam(lr=EnvDef.LR), loss='mse')
     self.critic = critic
 
-  def get_critic(self):
-    return self.critic
-
-  def get_critic_action_input(self):
-    return self.critic_action_input
 
   @staticmethod
   def prepare_x(X, batch=False):
@@ -549,23 +556,21 @@ if __name__ == '__main__':
 
   prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor(random_action=args.randomaction)})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
-  decision_agent = P(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
+  decision_agent = CEMAgent(model=dec_model.model, nb_actions=EnvDef.DECISION_ACTION_SPACE, memory=memory,
                             batch_size=50, nb_steps_warmup=200, train_interval=50, elite_frac=0.05)
 
   decision_agent.compile()
   memory2 = EpisodicMemory(experience_window_length=100000)
   attack_agent = PPOAgent(nb_actions=EnvDef.SPATIAL_OUTPUT[0],
+                          observation_shape=EnvDef.SPATIAL_INPUT + (1, ),
                                    actor=attack_model.model,
                                    processor=prc.inner_processors[AgentType.Attack],
-                                   critic=attack_model.get_critic(),
-                                   memory=memory2, nb_steps_warmup_actor=200,
-                                   nb_steps_warmup_critic=200,
-                                   critic_action_input=attack_model.get_critic_action_input(),
-                                   mask_processor=prc.inner_processors[AgentType.Attack])
+                                   critic=attack_model.critic,
+                                   memory=memory2, nb_steps_warmup=400,
+                                   masker=prc.inner_processors[AgentType.Attack])
 
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
-  agent.inner_agents[AgentType.Attack].compile(Adam(lr=0.001), metrics=['mean_squared_logarithmic_error'])
   if args.model_name is not None:
     agent.inner_agents[AgentType.Attack].load_weights(attack_model_name)
 

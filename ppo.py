@@ -1,7 +1,7 @@
 from rl.core import *
 from episodic_memory import *
 from keras import backend as K
-import math
+import os
 
 EPSILON = 1e-10
 
@@ -70,11 +70,13 @@ class PPOAgent(Agent):
     :type state: ndarray
     :return:
     """
-
     raw_action = self.actor.predict([state.reshape((1,) + state.shape),
                             self.dummy_value, self.dummy_action])[0]
     masked_raw_action = raw_action if self.masker is None else self.masker.mask(raw_action)
-    the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
+    try:
+      the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
+    except:
+      print 'va'
     one_hot_action = np.zeros(self.nb_actions)
     one_hot_action[the_choice] = 1.
     return masked_raw_action, raw_action, one_hot_action
