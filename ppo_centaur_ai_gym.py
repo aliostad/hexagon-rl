@@ -1,6 +1,6 @@
 from keras import Input, Model, Sequential
-from keras.layers import Flatten, Conv2D, Concatenate, Dense, Activation
-from keras.optimizers import Adam
+from keras.layers import Flatten, Conv2D, Concatenate, Dense, Activation, concatenate
+from keras.optimizers import Adam, SGD
 from rl.memory import SequentialMemory, EpisodeParameterMemory
 
 from hexagon_agent import *
@@ -32,6 +32,7 @@ class EnvDef:
   MOVE_REWARD_MULTIPLIER = 10
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
+  LR = 0.001
 
 # __________________________________________________________________________________________________________________________
 
@@ -441,40 +442,29 @@ class AttackModel:
     """
     self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000000))
 
-    state_input = Input(shape=(NUM_STATE,))
-    actual_value = Input(shape=(1,))
-    predicted_value = Input(shape=(1,))
-    old_prediction = Input(shape=(NUM_ACTIONS,))
+    state_input = Input(shape=(EnvDef.SPATIAL_INPUT + (1, ),))
+    advantage = Input(shape=(1,))
+    old_prediction = Input(EnvDef.SPATIAL_OUTPUT)
 
-    model = Sequential()
-    model.add(Conv2D(128, (5, 5), padding='same', activation='relu',
-              input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
-    model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(4, (3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(1, (3, 3), padding='same', activation='tanh'))
-    model.add(Flatten())
-    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
+    conv_path = Conv2D(128, (5, 5), padding='same', activation='relu', name='INPUT_ATTACK')(state_input)
+    conv_path = Conv2D(64, (3, 3), padding='same', activation='relu')(conv_path)
+    conv_path = Conv2D(16, (3, 3), padding='same', activation='relu')(conv_path)
+    conv_path = Conv2D(4, (3, 3), padding='same', activation='relu')(conv_path)
+    conv_path = Conv2D(1, (3, 3), padding='same', activation='tanh')(conv_path)
+    conv_path = Flatten()(conv_path)
+    merged = concatenate([conv_path, advantage, old_prediction], axis=1)
+    merged = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='relu')(merged)
+    actor_output = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh')(merged)
+    model = Model(inputs=[state_input, advantage, old_prediction], outputs=[actor_output])
+    model.compile(optimizer=SGD(lr=EnvDef.LR ),
+                  loss=[PPOAgent.proximal_policy_optimization_loss(
+                    advantage=advantage,
+                    old_prediction=old_prediction)])
 
     self.model = model
 
     self.critic_model = Model()
 
-    action_input = Input(shape=EnvDef.SPATIAL_OUTPUT, name='action_input')
-    observation_input = Input(shape=EnvDef.SPATIAL_INPUT + (1, ), name='observation_input')
-    self.critic_action_input = action_input
-    conv = Conv2D(256, (5, 5), padding='same', activation='relu')(observation_input)
-    conv = Conv2D(128, (3, 3), padding='same', activation='relu')(conv)
-    conv = Conv2D(32, (3, 3), padding='same', activation='relu')(conv)
-    conv = Conv2D(8, (3, 3), padding='same', activation='relu')(conv)
-    conv = Conv2D(1, (1, 1), padding='same', activation='tanh')(conv)
-    conv = Flatten()(conv)
-    conv = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh')(conv)
-    x = Concatenate()([action_input, conv])
-    x = Dense(32, activation='relu')(x)
-    x = Dense(16, activation='relu')(x)
-    x = Dense(8, activation='relu')(x)
-    x = Dense(1, activation='tanh')(x)
     critic = Model(inputs=[action_input, observation_input], outputs=x)
     self.critic = critic
 

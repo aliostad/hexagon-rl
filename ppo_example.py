@@ -30,7 +30,7 @@ def build_actor():
   x = Dense(256, activation='relu')(x)
 
   # Prefer this to entropy penalty
-  out_actions = NoisyDense(NUM_ACTIONS, activation='softmax', sigma_init=0.02, name='output')(x)
+  out_actions = Dense(NUM_ACTIONS, activation='softmax', name='output')(x)
 
   model = Model(inputs=[state_input, advantage, old_prediction], outputs=[out_actions])
   model.compile(optimizer=SGD(lr=LR),
