@@ -137,10 +137,12 @@ class PPOAgent(Agent):
       prob = K.sum(y_true * y_pred)
       old_prob = K.sum(y_true * old_prediction)
       r = prob / (old_prob + EPSILON)
-
-      return (prob * -K.log(prob + EPSILON) * PPOAgent.ENTROPY_LOSS) + K.mean(
+      entr_loss = (prob * -K.log(K.abs(prob) + EPSILON) * PPOAgent.ENTROPY_LOSS)
+      clip = K.mean(
         K.minimum(r * advantage, K.clip(r,
                                         min_value=1.-PPOAgent.loss_clipping,
                                         max_value=1.+PPOAgent.loss_clipping) * advantage))
+      rt = entr_loss + clip
+      return rt
 
     return loss

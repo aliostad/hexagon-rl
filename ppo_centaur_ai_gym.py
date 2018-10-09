@@ -33,7 +33,7 @@ class EnvDef:
   MOVE_REWARD_MULTIPLIER = 10
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
-  LR = 0.01
+  LR = 0.0001
 
 # __________________________________________________________________________________________________________________________
 
@@ -462,14 +462,18 @@ class AttackModel:
     conv_path = Conv2D(1, (3, 3), padding='same', activation='tanh')(conv_path)
     conv_path = Flatten()(conv_path)
     merged = concatenate([conv_path, advantage, old_prediction], axis=1)
-    merged = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='relu')(merged)
+    merged = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh')(merged)
     actor_output = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh')(merged)
     model = Model(inputs=[state_input, advantage, old_prediction], outputs=[actor_output])
     model.compile(optimizer=Adam(lr=EnvDef.LR),
                   loss=[PPOAgent.proximal_policy_optimization_loss(
                     advantage=advantage,
                     old_prediction=old_prediction)])
-
+    '''
+    [PPOAgent.proximal_policy_optimization_loss(
+                    advantage=advantage,
+                    old_prediction=old_prediction)]
+    '''
     self.model = model
     critic_input = Input(shape=(EnvDef.SPATIAL_INPUT + (1, )))
     critic_path = Flatten()(critic_input)
