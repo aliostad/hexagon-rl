@@ -73,10 +73,7 @@ class PPOAgent(Agent):
     raw_action = self.actor.predict([state.reshape((1,) + state.shape),
                             self.dummy_value, self.dummy_action])[0]
     masked_raw_action = raw_action if self.masker is None else self.masker.mask(raw_action)
-    try:
-      the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
-    except:
-      print 'va'
+    the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
     one_hot_action = np.zeros(self.nb_actions)
     one_hot_action[the_choice] = 1.
     return masked_raw_action, raw_action, one_hot_action
@@ -93,7 +90,7 @@ class PPOAgent(Agent):
     self.memory.append(self.last_observation,
                        self.last_one_hot_action, reward, terminal,
                        training=self.training,
-                       pred_action=self.last_raw_action)
+                       pred_action=self.last_masked_raw_action)
 
     if self.training and self.train_on_last_episode and terminal:
       self._run_training()
