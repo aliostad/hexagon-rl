@@ -73,7 +73,10 @@ class PPOAgent(Agent):
     raw_action = self.actor.predict([state.reshape((1,) + state.shape),
                             self.dummy_value, self.dummy_action])[0]
     masked_raw_action = raw_action if self.masker is None else self.masker.mask(raw_action)
-    the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
+    if self.training:
+      the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
+    else:
+      the_choice = np.argmax(masked_raw_action)
     one_hot_action = np.zeros(self.nb_actions)
     one_hot_action[the_choice] = 1.
     return masked_raw_action, raw_action, one_hot_action
