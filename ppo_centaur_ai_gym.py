@@ -32,6 +32,7 @@ class EnvDef:
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
   EPISODE_REWARD = 1000
   MOVE_REWARD_MULTIPLIER = 10
+  WARMUP = (MAX_GRID_LENGTH ** 2) + 200
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
   LR = 0.0001
@@ -571,7 +572,7 @@ if __name__ == '__main__':
                                    actor=attack_model.model,
                                    processor=prc.inner_processors[AgentType.Attack],
                                    critic=attack_model.critic,
-                                   memory=memory2, nb_steps_warmup=400,
+                                   memory=memory2, nb_steps_warmup=EnvDef.WARMUP,
                                    masker=prc.inner_processors[AgentType.Attack])
 
 
