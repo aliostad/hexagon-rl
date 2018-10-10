@@ -188,7 +188,7 @@ class HierarchicalCentaurEnv(Env):
                       attack_off=self.attack_off, boosting_off=self.boosting_off)
     self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
     shuffle(self.players)
-    self.game = Game(EnvDef.game_name, self.players, radius=5)
+    self.game = Game(EnvDef.game_name, self.players, radius=7)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
     self.game.start()
     playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))

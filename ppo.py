@@ -76,7 +76,7 @@ class PPOAgent(Agent):
     if self.training:
       the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))
     else:
-      the_choice = np.random.choice(self.nb_actions, p=np.nan_to_num(masked_raw_action))  # np.argmax(masked_raw_action)
+      the_choice = np.argmax(masked_raw_action)
     one_hot_action = np.zeros(self.nb_actions)
     one_hot_action[the_choice] = 1.
     return masked_raw_action, raw_action, one_hot_action
