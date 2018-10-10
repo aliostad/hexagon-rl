@@ -26,7 +26,8 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   CELL_FEATURE = 1
-  MAX_GRID_LENGTH = 9
+  MAX_GRID_LENGTH = 13
+  RADIUS = (MAX_GRID_LENGTH/2) + 1
   SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
   EPISODE_REWARD = 1000
@@ -188,7 +189,7 @@ class HierarchicalCentaurEnv(Env):
                       attack_off=self.attack_off, boosting_off=self.boosting_off)
     self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
     shuffle(self.players)
-    self.game = Game(EnvDef.game_name, self.players, radius=7)
+    self.game = Game(EnvDef.game_name, self.players, radius=EnvDef.RADIUS)
     hexagon_ui_api.games[EnvDef.game_name] = self.game
     self.game.start()
     playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(EnvDef.centaur_name))
