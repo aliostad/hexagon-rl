@@ -4,6 +4,12 @@ import numpy as np
 
 class Move:
   def __init__(self, fromCell, toCell, resources):
+    """
+
+    :type fromCell: CellId
+    :type toCell: CellId
+    :type resources: int
+    """
     self.fromCell = fromCell
     self.toCell = toCell
     self.resources = resources
@@ -177,12 +183,21 @@ class Game:
             moves.append((p, mv))
       except Exception as e:
         print('Error in move {} for player {}: {}'.format(self.round_no, p.name, e.message))
+    clashes = {}
     for t in moves:
       (p, mv) = t
+      if mv.toCell not in clashes:
+        clashes[mv.toCell] = []
+      if mv.fromCell not in clashes:
+        clashes[mv.fromCell] = []
+      clashes[mv.toCell].append(p.name)
+      clashes[mv.fromCell].append(p.name)
       success, errormsg = self.board.try_transfer(mv)
       if not success:
         print('Move {} from player {} illegal: {}'.format(self.round_no, p.name, errormsg))
-
+    for c in clashes:
+      if len(clashes[c]) > 1:
+        print('{} - Clash between {} on {}'.format(self.round_no, ', '.join(clashes[c]), c))
     # OK now increment
     self.board.increment_resources()
     stats = self.get_player_stats()

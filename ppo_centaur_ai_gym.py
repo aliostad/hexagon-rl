@@ -164,7 +164,6 @@ if __name__ == '__main__':
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
   if args.model_name is not None:
     agent.inner_agents[AgentType.Attack].load_weights(args.model_name)
-
   if len(sys.argv) == 1:
     print('Usage: python centaur_ai_gym.py (train|test)')
   elif args.what == 'train':

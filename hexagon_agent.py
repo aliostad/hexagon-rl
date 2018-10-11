@@ -215,6 +215,7 @@ class Aliostad(Player):
 
     cellToId = srt2[0]
     amount = int(cellFrom.resources * 70 / 100)
+    assert amount < cellFrom.resources
     return Move(cellFrom.id, cellToId, amount)
 
   def getAttackFromCellId(self, world):

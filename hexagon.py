@@ -121,7 +121,7 @@ class Cell:
     if fromCell.id == self.id:
       return False, 'Cannot transfer from {} to itself'.format(fromCell.id)
     if transfer > fromCell.resources:
-      return False, 'Cannot transfer {} from {} to {}. It is more than it has ()'.format(
+      return False, 'Cannot transfer {} from {} to {}. It is more than it has ({})'.format(
         transfer, fromCell.id, self.id, fromCell.resources)
     if self.owner != fromCell.owner:
       if self.resources > transfer:
