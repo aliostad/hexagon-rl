@@ -298,6 +298,11 @@ class Aliostad(Player):
     stat = TurnStat(cellCount=world.cellCount, resources=world.resources,
                     resourceLossStreak=self.history[-1].resourceLossStreak)
 
+    if self.history[-1].resources > stat.resources:
+      stat.resourceLossStreak += 1
+    else:
+      stat.resourceLossStreak = int(math.sqrt(stat.resourceLossStreak))
+
     if world.noneCounts > 0 and (world.noneCounts * 8 > world.enemyCounts or
                                  (r.uniform(0, 1) > 0.9 if self.random_variation else False)):
       stat.strategy = Strategy.Expand

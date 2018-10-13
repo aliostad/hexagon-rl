@@ -143,8 +143,8 @@ class Cell:
     return NeighbourInfo(self.id, self.resources, None if self.owner == Cell.NoOwner else owner == self.owner)
 
   def increment_resources(self):
-    if self.owner != Cell.NoOwner:
-      self.resources = min(Cell.MaximumResource, self.resources+1)
+    if self.owner != Cell.NoOwner and self.resources < Cell.MaximumResource:
+      self.resources += 1
 
 
 class BoardSnapshot:
