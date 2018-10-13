@@ -18,7 +18,7 @@ class AgentType:
 
 class SuperCentaurPlayer(Aliostad):
   def __init__(self, name, boost_likelihood=0.23, boosting_off=False, attack_off=False,
-               dont_own_move_reward=-5, cant_attack_move_reward=-3):
+               dont_own_move_reward=-5, cant_attack_move_reward=-3, verbose=False):
     Aliostad.__init__(self, name)
     self.reset_state()
     self.boost_likelihood = boost_likelihood
@@ -26,6 +26,7 @@ class SuperCentaurPlayer(Aliostad):
     self.attack_off = attack_off
     self.dont_own_move_reward = dont_own_move_reward
     self.cant_attack_move_reward = cant_attack_move_reward
+    self.verbose = verbose
 
   def reset_state(self):
     self.actions = {}
@@ -59,11 +60,13 @@ class SuperCentaurPlayer(Aliostad):
     cellId = self.actions[AgentType.Attack]
     if cellId not in world.uberCells:
       self.illegal_move_reward_by_agents[AgentType.Attack] = self.dont_own_move_reward
-      print('{} - illegal move (dont own): {}'.format(world.round_no, cellId))
+      if self.verbose:
+        print('{} - illegal move (dont own): {}'.format(world.round_no, cellId))
       return None
     if not world.uberCells[cellId].canAttackOrExpand:
       self.illegal_move_reward_by_agents[AgentType.Attack] = self.cant_attack_move_reward
-      print('{} - illegal move (cant attack): {}'.format(world.round_no, cellId))
+      if self.verbose:
+        print('{} - illegal move (cant attack): {}'.format(world.round_no, cellId))
       return None
     #print ('{} - legal!!'.format(world.round_no))
     return cellId
@@ -73,7 +76,7 @@ class HierarchicalCentaurEnv(Env):
   def __init__(self, centaur_boost_likelihood, opponent_randomness=None,
                boosting_off=False, attack_off=False, centaur_name='centaur',
                game_name='1', move_reward_multiplier=10, max_rounds=2000,
-               episode_reward=1000, radius=5):
+               episode_reward=1000, radius=5, game_verbose=True):
     self.boosting_off = boosting_off
     self.attack_off = attack_off
     self.opponent_randomness = opponent_randomness
@@ -94,6 +97,7 @@ class HierarchicalCentaurEnv(Env):
     self.max_rounds = max_rounds
     self.episode_reward = episode_reward
     self.radius = radius
+    self.game_verbose = game_verbose
 
   def configure(self, *args, **kwargs):
     pass
@@ -171,7 +175,7 @@ class HierarchicalCentaurEnv(Env):
                       attack_off=self.attack_off, boosting_off=self.boosting_off)
     self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
     shuffle(self.players)
-    self.game = Game(self.game_name, self.players, radius=self.radius)
+    self.game = Game(self.game_name, self.players, radius=self.radius, verbose=self.game_verbose)
     hexagon_ui_api.games[self.game_name] = self.game
     self.game.start()
     playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(self.centaur_name))

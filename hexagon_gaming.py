@@ -102,7 +102,7 @@ class Player:
 
 
 class Game:
-  def __init__(self, name, players, radius=None):
+  def __init__(self, name, players, radius=None, verbose=True):
     """
 
     :type name: str
@@ -116,6 +116,7 @@ class Game:
     self._started = False
     self.round_no = 0
     self.board = None
+    self.verbose = verbose
 
   @staticmethod
   def get_optimum_board_size(number_of_players):
@@ -193,10 +194,10 @@ class Game:
       clashes[mv.toCell].append(p.name)
       clashes[mv.fromCell].append(p.name)
       success, errormsg = self.board.try_transfer(mv)
-      if not success:
+      if not success and self.verbose:
         print('Move {} from player {} illegal: {}'.format(self.round_no, p.name, errormsg))
     for c in clashes:
-      if len(clashes[c]) > 1:
+      if len(clashes[c]) > 1 and self.verbose:
         print('{} - Clash between {} on {}'.format(self.round_no, ', '.join(clashes[c]), c))
     # OK now increment
     self.board.increment_resources()

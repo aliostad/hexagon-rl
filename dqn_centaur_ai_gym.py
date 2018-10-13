@@ -32,7 +32,7 @@ class EnvDef:
   MOVE_REWARD_MULTIPLIER = 10
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
-
+  GAME_VERBOSE=False
 # __________________________________________________________________________________________________________________________
 
 class NoneZeroEpsGreedyQPolicy(EpsGreedyQPolicy):
@@ -135,6 +135,24 @@ class DecisionModel:
 
 # ______________________________________________________________________________________________________________________________
 
+class SimpleAttackModel:
+  def __init__(self, modelName=None):
+    """
+
+    :type theMethod: str
+    """
+    self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000000))
+
+    model = Sequential()
+    model.add(Conv2D(64, (3, 3), padding='same', activation='relu',
+              input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
+    model.add(Conv2D(16, (3, 3), padding='same', activation='relu'))
+    model.add(Conv2D(1, (1, 1), padding='same', activation='tanh'))
+    model.add(Flatten())
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
+
+    self.model = model
+
 
 class AttackModel:
   def __init__(self, modelName=None):
@@ -200,13 +218,14 @@ if __name__ == '__main__':
   args = menu()
   env = HierarchicalCentaurEnv(opponent_randomness=args.randomness,
                                centaur_boost_likelihood=args.centaur_boost_likelihood,
-                               boosting_off=args.boostingoff, attack_off=args.attackoff)
+                               boosting_off=args.boostingoff, attack_off=args.attackoff,
+                               game_verbose=EnvDef.GAME_VERBOSE)
   np.random.seed(42)
   env.seed(42)
 
   prc = CentaurDecisionProcessor()
   dec_model = DecisionModel()
-  attack_model = AttackModel('Attack_model_params.h5f')
+  attack_model = SimpleAttackModel('Attack_model_params.h5f')
 
   prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor(EnvDef.SPATIAL_INPUT, random_action=args.randomaction)})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
@@ -222,7 +241,8 @@ if __name__ == '__main__':
                           nb_actions=EnvDef.SPATIAL_OUTPUT[0],
                           memory=memory2, nb_steps_warmup=500,
                           enable_dueling_network=True,
-                          mask_processor=prc.inner_processors[AgentType.Attack])
+                          mask_processor=None)
+                          # mask_processor = prc.inner_processors[AgentType.Attack])
 
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)

@@ -29,7 +29,7 @@ class EnvDef:
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
   WARMUP = (MAX_GRID_LENGTH ** 2) * 5
   LR = 0.0001
-
+  GAME_VERBOSE = False
 # __________________________________________________________________________________________________________________________
 
 
@@ -137,7 +137,8 @@ if __name__ == '__main__':
   args = menu()
   env = HierarchicalCentaurEnv(opponent_randomness=args.randomness,
                                centaur_boost_likelihood=args.centaur_boost_likelihood,
-                               boosting_off=args.boostingoff, attack_off=args.attackoff)
+                               boosting_off=args.boostingoff, attack_off=args.attackoff,
+                               game_verbose=EnvDef.GAME_VERBOSE)
   np.random.seed(42)
   env.seed(42)
 
