@@ -338,8 +338,8 @@ class Aliostad(Player):
       stat.strategy = Strategy.Boost
       return self.getBoost(world), stat, world
     elif stat.resourceLossStreak > 3 or len(filter(lambda x: world.uberCells[x].canAttack,
-                                                   world.uberCells)) == 0:
-      isTimeForBoost = self.timeForBoost(world)
+                                                   world.uberCells)) == 0 or self.timeForBoost(world):
+      isTimeForBoost = True
       self.boost_stats.append(isTimeForBoost)
       if isTimeForBoost:
         stat.strategy = Strategy.Boost
