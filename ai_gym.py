@@ -133,7 +133,8 @@ class HierarchicalCentaurEnv(Env):
         if stat.playerName not in self.cellLeaderBoard:
           self.cellLeaderBoard[stat.playerName] = 0
         self.cellLeaderBoard[stat.playerName] += stat.cellsOwned
-        print('{} {} ({}) - {}'.format(stat.playerName, stat.cellsOwned, stat.totalResources, str(extraInfo[stat.playerName])))
+        print('{} {} ({}) - {}'.format(stat.playerName, stat.cellsOwned, stat.totalResources,
+              str(extraInfo[stat.playerName]) if stat.playerName in extraInfo else 'NoInfo'))
 
       for name in self.leaderBoard:
         print(' - {}: {} ({})'.format(name, self.leaderBoard[name], self.cellLeaderBoard[name]))
