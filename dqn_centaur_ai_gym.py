@@ -136,6 +136,24 @@ class DecisionModel:
 
 # ______________________________________________________________________________________________________________________________
 
+class SimplestAttackModel:
+  def __init__(self, modelName=None):
+    """
+
+    :type theMethod: str
+    """
+    self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000000))
+
+    model = Sequential()
+    model.add(Flatten(
+              input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dense(128, activation='relu'))
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
+
+    self.model = model
+
+
 class SimpleAttackModel:
   def __init__(self, modelName=None):
     """
@@ -226,7 +244,7 @@ if __name__ == '__main__':
 
   prc = CentaurDecisionProcessor()
   dec_model = DecisionModel()
-  attack_model = SimpleAttackModel('Attack_model_params.h5f')
+  attack_model = SimplestAttackModel('Attack_model_params.h5f')
 
   prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor(EnvDef.SPATIAL_INPUT, random_action=args.randomaction)})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
