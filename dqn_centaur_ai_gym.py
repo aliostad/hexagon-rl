@@ -149,7 +149,7 @@ class SimplestAttackModel:
               input_shape=EnvDef.SPATIAL_INPUT + (1, ), name='INPUT_ATTACK'))
     model.add(Dense(256, activation='relu'))
     model.add(Dense(128, activation='relu'))
-    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh'))
+    model.add(Dense(EnvDef.SPATIAL_OUTPUT[0], activation='softmax'))
 
     self.model = model
 
