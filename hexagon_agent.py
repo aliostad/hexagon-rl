@@ -276,18 +276,15 @@ class Aliostad(Player):
           return True
     return False
 
-  def build_world(self, cells):
+  @staticmethod
+  def build_world(cells, round_no):
     """
 
     :type cells: list of CellInfo
+    :type round_no: int
     :return:
     """
-    if len(self.history) == 0:
-      self.history.append(TurnStat(Strategy.Expand))
-
-    self.round_no += 1
-    world = World(cells, self.round_no)
-    return world
+    return World(cells, round_no)
 
   def turnx(self, world):
     '''
@@ -295,6 +292,10 @@ class Aliostad(Player):
     :type world: World
     :return: Move
     '''
+    if len(self.history) == 0:
+      self.history.append(TurnStat(Strategy.Expand))
+    self.round_no += 1
+
     stat = TurnStat(cellCount=world.cellCount, resources=world.resources,
                     resourceLossStreak=self.history[-1].resourceLossStreak)
 
@@ -357,7 +358,7 @@ class Aliostad(Player):
     :type playerView: PlayerView
     :return: Move
     """
-    move, h, world = self.turnx(self.build_world(playerView.ownedCells))
+    move, h, world = self.turnx(Aliostad.build_world(playerView.ownedCells, self.round_no))
     self.history.append(h)
     self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
                                                                    h.strategy,
@@ -380,18 +381,6 @@ class Aliostad(Player):
                                                             move.fromCell,
                                                             move.toCell,
                                                             move.resources))
-    return move
-
-  def turn(self, cells):
-    seashells = Aliostad.transform_jsoncells_to_infos(cells)
-    move, h, world = self.turnx(self.build_world(seashells))
-    self.history.append(h)
-    self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
-                                                                   h.strategy,
-                                                                   move.fromCell,
-                                                                   move.toCell,
-                                                                   move.resources,
-                                                                   world.cells[move.fromCell]))
     return move
 
   def finish(self):

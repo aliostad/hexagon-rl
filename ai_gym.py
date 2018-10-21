@@ -89,7 +89,6 @@ class HierarchicalCentaurEnv(Env):
     self.world = None
     self.leaderBoard = {}
     self.cellLeaderBoard = {}
-    self.shortMemory = []
     self.centaur_boost_likelihood = centaur_boost_likelihood
     self.centaur_name = centaur_name
     self.game_name = game_name
@@ -140,23 +139,12 @@ class HierarchicalCentaurEnv(Env):
         print(' - {}: {} ({})'.format(name, self.leaderBoard[name], self.cellLeaderBoard[name]))
 
     playerView = PlayerView(self.game.round_no, info)
-    wrld = self.centaur.build_world(playerView.ownedCells)
-    self.push_world(wrld)
+    wrld = Aliostad.build_world(playerView.ownedCells, self.game.round_no)
+    self.world = wrld
     rewards = {name: (reward + self.centaur.illegal_move_reward_by_agents[name]) if name in self.centaur.illegal_move_reward_by_agents else
       reward for name in self.centaur.was_called}
     self.centaur.reset_state()
     return wrld, rewards, isFinished, {}
-
-  def push_world(self, world):
-    """
-
-    :type world: World
-    :return:
-    """
-    self.world = world
-    self.shortMemory.append(world)
-    if len(self.shortMemory) > 1:
-      del self.shortMemory[0]
 
   def close(self):
     print('closing CentaurEnv')
@@ -167,10 +155,6 @@ class HierarchicalCentaurEnv(Env):
     if self.game is not None:
       self.game.finish()
 
-    self.shortMemory = []
-    for i in range(0, 1):
-      self.shortMemory.append(World([], 0))
-
     self.centaur = SuperCentaurPlayer(self.centaur_name,
                       boost_likelihood=self.centaur_boost_likelihood,
                       attack_off=self.attack_off, boosting_off=self.boosting_off)
@@ -179,9 +163,10 @@ class HierarchicalCentaurEnv(Env):
     self.game = Game(self.game_name, self.players, radius=self.radius, verbose=self.game_verbose)
     hexagon_ui_api.games[self.game_name] = self.game
     self.game.start()
+
     playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(self.centaur_name))
-    wrld = self.centaur.build_world(playerView.ownedCells)
-    self.push_world(wrld)
+    wrld = Aliostad.build_world(playerView.ownedCells, self.game.round_no)
+    self.world = wrld
     return wrld
 
 
@@ -415,6 +400,7 @@ def menu():
   parser.add_argument('--model_name', '-m', help="attack model name to load", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
   parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool, nargs='?', const=True)
+  parser.add_argument('--selfplay', '-s', help="agent plays itself instead of Aliostad", type=bool, nargs='?', const=True)
   parser.add_argument('--boostingoff', '-y', help="don't use boosting method of centaur",
                       type=bool, nargs='?', const=True, default=True)
   parser.add_argument('--attackoff', '-z', help="dont use attack method of centaur",

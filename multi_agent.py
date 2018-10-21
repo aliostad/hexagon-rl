@@ -9,57 +9,6 @@ from rl.callbacks import (
     Visualizer
 )
 
-class MultiEnv(Env):
-
-  def __init__(self, innerEnvs):
-    """
-
-    :type innerEnv: dict of str: Env
-    """
-    #super(MultiEnv, self).__init()
-    self.inner_envs = innerEnvs
-
-  def render(self, mode='human', close=False):
-    """
-    DONT USE. USE DIRECTLY ON YOUR AGENT
-    :param mode:
-    :param close:
-    :return:
-    """
-    raise NotImplementedError()
-
-  def close(self):
-    for name in self.inner_envs:
-      self.inner_envs[name].close()
-
-  def configure(self, *args, **kwargs):
-    """
-    DONT USE. USE DIRECTLY ON YOUR ENV
-    :param args:
-    :param kwargs:
-    :return:
-    """
-    raise NotImplementedError()
-
-  def reset(self):
-    return {name: self.inner_envs[name].reset() for name in self.inner_envs}
-
-  def step(self, actions):
-    rewards = {}
-    obs = {}
-    isDone = False
-    for name in self.inner_envs:
-      observation, r, done, info = self.inner_envs[name].step(actions[name])
-      rewards[name] = r
-      obs[name] = observation
-      isDone = done or isDone
-    return obs, rewards, isDone, {}
-
-  def seed(self, seed=None):
-    self._seed = seed
-    return [self._seed]
-
-
 class MultiAgent(Agent):
 
   @property
@@ -158,8 +107,8 @@ class MultiAgent(Agent):
 
       if verbose == 1:
           callbacks += [TrainIntervalLogger(interval=log_interval)]
-      #elif verbose > 1:
-          #callbacks += [TrainEpisodeLogger()]
+      elif verbose > 1:
+          callbacks += [TrainEpisodeLogger()]
       if visualize:
           callbacks += [Visualizer()]
       history = History()
@@ -260,9 +209,9 @@ class MultiAgent(Agent):
                 episode_reward += reward
 
               step_logs = {
-                  'action': action,
-                  'observation': observation,
-                  'reward': reward,
+                  'action': np.NaN,
+                  'observation': np.NaN,
+                  'reward': sum(reward.values()),
                   'metrics': metrics,
                   'episode': episode,
                   'info': accumulated_info,
