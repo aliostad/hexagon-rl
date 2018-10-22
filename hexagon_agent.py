@@ -174,7 +174,6 @@ class Aliostad(Player):
     self.random_variation = randomVariation
     self.boost_stats = []
     self.move_handicap = moveHandicap
-    self.move_handicap_cycle = moveHandicap
 
   @staticmethod
   def transform_jsoncells_to_infos(cells):
@@ -368,13 +367,7 @@ class Aliostad(Player):
                                                                    move.toCell,
                                                                    move.resources,
                                                                    world.cells[move.fromCell]))
-    if self.move_handicap_cycle is not None:
-      self.move_handicap_cycle += 1
-      if self.move_handicap_cycle >= self.move_handicap:
-        self.move_handicap = 0
-      else:
-        return None  # EXIT!!
-    return move
+    return move if np.random.uniform() > self.move_handicap else None
 
   def movex(self, world):
     """
