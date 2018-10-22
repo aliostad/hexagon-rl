@@ -25,15 +25,15 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   CELL_FEATURE = 1
-  MAX_GRID_LENGTH = 9
+  MAX_GRID_LENGTH = 8
   SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
   EPISODE_REWARD = 1000
   MOVE_REWARD_MULTIPLIER = 10
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
-  GAME_VERBOSE=False
-  RADIUS = 5
+  GAME_VERBOSE = False
+  RADIUS = 4
 # __________________________________________________________________________________________________________________________
 
 class NoneZeroEpsGreedyQPolicy(EpsGreedyQPolicy):
