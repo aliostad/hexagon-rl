@@ -25,7 +25,7 @@ class EnvDef:
   SHORT_MEMORY_SIZE = 1
   MAX_ROUND = 2000
   CELL_FEATURE = 1
-  MAX_GRID_LENGTH = 5
+  MAX_GRID_LENGTH = 9
   SPATIAL_INPUT = (MAX_GRID_LENGTH, MAX_GRID_LENGTH)
   SPATIAL_OUTPUT = (MAX_GRID_LENGTH * MAX_GRID_LENGTH, )
   EPISODE_REWARD = 1000
@@ -33,7 +33,7 @@ class EnvDef:
   DONT_OWN_MOVE_REWARD = -5
   CANT_ATTACK_MOVE_REWARD = -3
   GAME_VERBOSE=False
-  RADIUS = 3
+  RADIUS = 5
 # __________________________________________________________________________________________________________________________
 
 class NoneZeroEpsGreedyQPolicy(EpsGreedyQPolicy):
@@ -238,7 +238,8 @@ if __name__ == '__main__':
   env = HierarchicalCentaurEnv(opponent_randomness=args.randomness,
                                centaur_boost_likelihood=args.centaur_boost_likelihood,
                                boosting_off=args.boostingoff, attack_off=args.attackoff,
-                               game_verbose=EnvDef.GAME_VERBOSE, radius=EnvDef.RADIUS)
+                               game_verbose=EnvDef.GAME_VERBOSE, radius=EnvDef.RADIUS,
+                               move_shuffle=args.moveshuffle)
   np.random.seed(42)
   env.seed(42)
 

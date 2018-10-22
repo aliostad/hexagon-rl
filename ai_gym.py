@@ -76,7 +76,7 @@ class HierarchicalCentaurEnv(Env):
   def __init__(self, centaur_boost_likelihood, opponent_randomness=None,
                boosting_off=False, attack_off=False, centaur_name='centaur',
                game_name='1', move_reward_multiplier=10, max_rounds=2000,
-               episode_reward=1000, radius=5, game_verbose=True):
+               episode_reward=1000, radius=5, game_verbose=True, move_shuffle=False):
     self.boosting_off = boosting_off
     self.attack_off = attack_off
     self.opponent_randomness = opponent_randomness
@@ -97,6 +97,7 @@ class HierarchicalCentaurEnv(Env):
     self.episode_reward = episode_reward
     self.radius = radius
     self.game_verbose = game_verbose
+    self.move_shuffle = move_shuffle
 
   def configure(self, *args, **kwargs):
     pass
@@ -160,7 +161,8 @@ class HierarchicalCentaurEnv(Env):
                       attack_off=self.attack_off, boosting_off=self.boosting_off)
     self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
     shuffle(self.players)
-    self.game = Game(self.game_name, self.players, radius=self.radius, verbose=self.game_verbose)
+    self.game = Game(self.game_name, self.players, radius=self.radius,
+                     verbose=self.game_verbose, move_suffule=self.move_shuffle)
     hexagon_ui_api.games[self.game_name] = self.game
     self.game.start()
 
@@ -400,7 +402,7 @@ def menu():
   parser.add_argument('--model_name', '-m', help="attack model name to load", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
   parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool, nargs='?', const=True)
-  parser.add_argument('--selfplay', '-s', help="agent plays itself instead of Aliostad", type=bool, nargs='?', const=True)
+  parser.add_argument('--moveshuffle', '-f', help="shuffle order of executing moves", type=bool, nargs='?', const=True)
   parser.add_argument('--boostingoff', '-y', help="don't use boosting method of centaur",
                       type=bool, nargs='?', const=True, default=True)
   parser.add_argument('--attackoff', '-z', help="dont use attack method of centaur",

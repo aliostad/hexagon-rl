@@ -1,12 +1,11 @@
 from keras import Input, Model
 from keras.layers import Dense, Flatten
-from keras.optimizers import Adam, SGD
+from keras.optimizers import Adam
 import gym
-from noisy_dense import NoisyDense
 
 from rl.agents import DQNAgent
 from rl.memory import SequentialMemory
-from episodic_memory import EpisodicMemory
+
 
 LR = 3e-5
 

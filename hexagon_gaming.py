@@ -102,7 +102,7 @@ class Player:
 
 
 class Game:
-  def __init__(self, name, players, radius=None, verbose=True):
+  def __init__(self, name, players, radius=None, verbose=True, move_suffule=True):
     """
 
     :type name: str
@@ -117,6 +117,7 @@ class Game:
     self.round_no = 0
     self.board = None
     self.verbose = verbose
+    self.move_shuffle = move_suffule
 
   @staticmethod
   def get_optimum_board_size(number_of_players):
@@ -171,7 +172,9 @@ class Game:
 
   def run_sync(self):
     self.round_no += 1
-    idx = np.random.permutation(np.arange(len(self.real_players)))
+    idx = np.random.permutation(np.arange(len(self.real_players))) if \
+            self.move_shuffle else range(0, len(self.real_players))
+
     moves = []
     for i in idx:
       p = self.real_players[i]
