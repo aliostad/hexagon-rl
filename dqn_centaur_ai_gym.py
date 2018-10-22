@@ -245,7 +245,7 @@ if __name__ == '__main__':
 
   prc = CentaurDecisionProcessor()
   dec_model = DecisionModel()
-  attack_model = SimplestAttackModel('Attack_model_params.h5f')
+  attack_model = SimpleAttackModel('Attack_model_params.h5f')
 
   prc = MultiProcessor({AgentType.BoostDecision: prc, AgentType.Attack: CentaurAttackProcessor(EnvDef.SPATIAL_INPUT, random_action=args.randomaction)})
   memory = EpisodeParameterMemory(limit=1000, window_length=1)
