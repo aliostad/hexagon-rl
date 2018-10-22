@@ -239,7 +239,7 @@ if __name__ == '__main__':
                                centaur_boost_likelihood=args.centaur_boost_likelihood,
                                boosting_off=args.boostingoff, attack_off=args.attackoff,
                                game_verbose=EnvDef.GAME_VERBOSE, radius=EnvDef.RADIUS,
-                               move_shuffle=args.moveshuffle)
+                               move_shuffle=args.moveshuffle, move_handicap=args.handicap)
   np.random.seed(42)
   env.seed(42)
 

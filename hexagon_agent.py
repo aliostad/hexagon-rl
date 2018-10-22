@@ -165,7 +165,7 @@ class World:
 
 class Aliostad(Player):
 
-  def __init__(self, name, randomBoostFactor=None, randomVariation=False):
+  def __init__(self, name, randomBoostFactor=None, randomVariation=False, moveHandicap=None):
     Player.__init__(self, name)
     self.round_no = 0
     self.history = []
@@ -173,6 +173,8 @@ class Aliostad(Player):
     self.f = open(name + ".log", mode='w')
     self.random_variation = randomVariation
     self.boost_stats = []
+    self.move_handicap = moveHandicap
+    self.move_handicap_cycle = moveHandicap
 
   @staticmethod
   def transform_jsoncells_to_infos(cells):
@@ -366,6 +368,12 @@ class Aliostad(Player):
                                                                    move.toCell,
                                                                    move.resources,
                                                                    world.cells[move.fromCell]))
+    if self.move_handicap_cycle is not None:
+      self.move_handicap_cycle += 1
+      if self.move_handicap_cycle >= self.move_handicap:
+        self.move_handicap = 0
+      else:
+        return None  # EXIT!!
     return move
 
   def movex(self, world):

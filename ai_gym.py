@@ -76,7 +76,8 @@ class HierarchicalCentaurEnv(Env):
   def __init__(self, centaur_boost_likelihood, opponent_randomness=None,
                boosting_off=False, attack_off=False, centaur_name='centaur',
                game_name='1', move_reward_multiplier=10, max_rounds=2000,
-               episode_reward=1000, radius=5, game_verbose=True, move_shuffle=False):
+               episode_reward=1000, radius=5, game_verbose=True,
+               move_shuffle=True, move_handicap=None):
     self.boosting_off = boosting_off
     self.attack_off = attack_off
     self.opponent_randomness = opponent_randomness
@@ -98,6 +99,7 @@ class HierarchicalCentaurEnv(Env):
     self.radius = radius
     self.game_verbose = game_verbose
     self.move_shuffle = move_shuffle
+    self.move_handicap = move_handicap
 
   def configure(self, *args, **kwargs):
     pass
@@ -159,7 +161,8 @@ class HierarchicalCentaurEnv(Env):
     self.centaur = SuperCentaurPlayer(self.centaur_name,
                       boost_likelihood=self.centaur_boost_likelihood,
                       attack_off=self.attack_off, boosting_off=self.boosting_off)
-    self.players = [self.centaur, Aliostad('aliostad', randomBoostFactor=self.opponent_randomness)]
+    self.players = [Aliostad('aliostad', randomBoostFactor=self.opponent_randomness, moveHandicap=self.move_handicap),
+                    self.centaur]
     shuffle(self.players)
     self.game = Game(self.game_name, self.players, radius=self.radius,
                      verbose=self.game_verbose, move_suffule=self.move_shuffle)
@@ -408,6 +411,7 @@ def menu():
   parser.add_argument('--attackoff', '-z', help="dont use attack method of centaur",
                       type=bool, nargs='?', const=True, default=False)
   parser.add_argument('--testrounds', '-t', help="number of epochs when testing", type=int, default=100)
+  parser.add_argument('--handicap', '-p', help="handicap of Aliostad in returning None move", type=int, default=None)
   parser.add_argument('--centaur_boost_likelihood', '-b', help="likelihood of random boost for centaur", type=float, default=0.23)
   return parser.parse_args(sys.argv[1:])
 
