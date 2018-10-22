@@ -405,7 +405,7 @@ def menu():
   parser.add_argument('--model_name', '-m', help="attack model name to load", type=str)
   parser.add_argument('--randomness', '-r', help="randomness of aliostad", type=float)
   parser.add_argument('--randomaction', '-x', help="action completely random but valid", type=bool, nargs='?', const=True)
-  parser.add_argument('--moveshuffle', '-f', help="shuffle order of executing moves", type=bool, nargs='?', const=True)
+  parser.add_argument('--moveshuffle', '-f', help="shuffle order of executing moves", type=bool, nargs='?', const=False)
   parser.add_argument('--boostingoff', '-y', help="don't use boosting method of centaur",
                       type=bool, nargs='?', const=True, default=True)
   parser.add_argument('--attackoff', '-z', help="dont use attack method of centaur",
