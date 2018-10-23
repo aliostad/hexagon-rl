@@ -410,6 +410,8 @@ def menu():
                       type=bool, nargs='?', const=True, default=True)
   parser.add_argument('--attackoff', '-z', help="dont use attack method of centaur",
                       type=bool, nargs='?', const=True, default=False)
+  parser.add_argument('--usemasking', '-z', help="use masking to choose only allowed moves",
+                      type=bool, nargs='?', const=True, default=False)
   parser.add_argument('--testrounds', '-t', help="number of epochs when testing", type=int, default=100)
   parser.add_argument('--handicap', '-p', help="handicap of Aliostad in returning None move", type=float, default=0.)
   parser.add_argument('--centaur_boost_likelihood', '-b', help="likelihood of random boost for centaur", type=float, default=0.23)

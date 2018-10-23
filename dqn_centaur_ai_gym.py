@@ -261,8 +261,7 @@ if __name__ == '__main__':
                           nb_actions=EnvDef.SPATIAL_OUTPUT[0],
                           memory=memory2, nb_steps_warmup=500,
                           enable_dueling_network=True,
-                          mask_processor=None)
-                          # mask_processor = prc.inner_processors[AgentType.Attack])
+                          mask_processor=prc.inner_processors[AgentType.Attack] if args.usemasking else None)
 
 
   agent = MultiAgent({AgentType.BoostDecision: decision_agent, AgentType.Attack: attack_agent}, processor=prc, save_frequency=0.05)
