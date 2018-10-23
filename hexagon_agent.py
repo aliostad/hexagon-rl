@@ -367,7 +367,7 @@ class Aliostad(Player):
                                                                    move.toCell,
                                                                    move.resources,
                                                                    world.cells[move.fromCell]))
-    return move if np.random.uniform() > self.move_handicap else None
+    return move if h.strategy == Strategy.Expand or np.random.uniform() > self.move_handicap else None
 
   def movex(self, world):
     """
