@@ -68,7 +68,6 @@ class SuperCentaurPlayer(Aliostad):
       if self.verbose:
         print('{} - illegal move (cant attack): {}'.format(world.round_no, cellId))
       return None
-    #print ('{} - legal!!'.format(world.round_no))
     return cellId
 
 # __________________________________________________________________________________________________________________________

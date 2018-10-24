@@ -174,6 +174,7 @@ class Aliostad(Player):
     self.random_variation = randomVariation
     self.boost_stats = []
     self.move_handicap = moveHandicap
+    self.invalid_moves = 0
 
   @staticmethod
   def transform_jsoncells_to_infos(cells):
@@ -243,20 +244,19 @@ class Aliostad(Player):
     cellFromId = self.getAttackFromCellId(world)
 
     if cellFromId is None:
-      return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
+      return None
 
     cellFrom = world.uberCells[cellFromId]
     srt2 = sorted(cellFrom.nonOwns, key=lambda x: x.resources *
                                                   (r.uniform(0.1, 5) if self.random_variation else 1.))
     if len(srt2) == 0:
-      return Move(CellId(0, 0), CellId(0, 0), 1000)  # invalid move, nothing better to do
+      return None
     cellTo = srt2[0]
 
     assert cellFrom.resources > cellTo.resources, 'resources: from: {} - to: {}'.format(cellFrom.resources, cellTo.resources)
 
     amount = cellTo.resources + ((cellFrom.resources - cellTo.resources) * 70 / 100)
     assert amount >= cellTo.resources
-    # print("{}: Attack from {} to {}".format(self.name, cellFrom.id, cellTo.id))
     return Move(cellFrom.id, cellTo.id, amount)
 
   def timeForBoost(self, world):
@@ -287,7 +287,7 @@ class Aliostad(Player):
     """
     return World(cells, round_no)
 
-  def turnx(self, world):
+  def turn(self, world):
     '''
 
     :type world: World
@@ -359,33 +359,33 @@ class Aliostad(Player):
     :type playerView: PlayerView
     :return: Move
     """
-    move, h, world = self.turnx(Aliostad.build_world(playerView.ownedCells, self.round_no))
+    return self.movex(Aliostad.build_world(playerView.ownedCells, self.round_no))
+
+  def movex(self, world):
+    """
+    Used when we already have a world
+    :type world: World
+    :return: Move
+    """
+    move, h, worldx = self.turn(world)
     self.history.append(h)
-    self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
+    if move is None:
+      self.invalid_moves += 1
+      self.f.write('{} - None move from {} strategy\n'.format(self.round_no, h.strategy))
+    else:
+      self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
                                                                    h.strategy,
                                                                    move.fromCell,
                                                                    move.toCell,
                                                                    move.resources,
                                                                    world.cells[move.fromCell]))
-    return move if h.strategy == Strategy.Expand or np.random.uniform() > self.move_handicap else None
-
-  def movex(self, world):
-    """
-
-    :type world: World
-    :return: Move
-    """
-    move, h, worldx = self.turnx(world)
-    self.history.append(h)
-    self.f.write("{} - {}: From {} to {} with {} \n".format(self.round_no,
-                                                            h.strategy,
-                                                            move.fromCell,
-                                                            move.toCell,
-                                                            move.resources))
     return move
 
   def finish(self):
     Player.finish(self)
     total = len(self.boost_stats)
     boosted = len(filter(lambda x: x, self.boost_stats))
-    return {'boost_ratio': (1. * boosted) / (total + 1e-5)}
+    info = {}
+    info['boost_ratio'] = (1. * boosted) / (total + 1e-5)
+    info['invalid_moves'] = (1. * self.invalid_moves) / self.round_no
+    return info
