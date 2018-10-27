@@ -100,9 +100,12 @@ class Player:
     """
     raise NotImplementedError("move")
 
+  def clone(self):
+    pass
+
 
 class Game:
-  def __init__(self, name, players, radius=None, verbose=True, move_suffule=True):
+  def __init__(self, name, players, radius=None, verbose=True, move_shuffle=True):
     """
 
     :type name: str
@@ -117,7 +120,20 @@ class Game:
     self.round_no = 0
     self.board = None
     self.verbose = verbose
-    self.move_shuffle = move_suffule
+    self.move_shuffle = move_shuffle
+
+  def clone(self):
+    g = Game(self.name,
+             map(lambda x: x.clone(), self.players),
+             self.radius,
+             verbose=False,
+             move_shuffle=self.move_shuffle)
+
+    g.real_players = map(lambda x: x.clone(), self.real_players)
+    g._started = self._started
+    g.board = self.board.clone()
+    g.round_no = self.round_no
+    return g
 
   @staticmethod
   def get_optimum_board_size(number_of_players):
@@ -155,7 +171,6 @@ class Game:
       self.board.change_ownership(CellId(0, pole), self.real_players[4].name, Cell.MaximumResource)
     if len(self.real_players) > 5:
       self.board.change_ownership(CellId(0, -pole), self.real_players[5].name, Cell.MaximumResource)
-
 
   def start(self):
     if self._started:
@@ -221,8 +236,9 @@ class Game:
       result[p.name] = p.finish()
     return result
 
-
   def finish(self):
     if not self._started:
       raise RuntimeError('Game not started')
     self._started = False
+
+

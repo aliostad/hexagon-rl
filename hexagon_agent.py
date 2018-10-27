@@ -165,16 +165,29 @@ class World:
 
 class Aliostad(Player):
 
-  def __init__(self, name, randomBoostFactor=None, randomVariation=False, moveHandicap=None):
+  def __init__(self, name,
+               randomBoostFactor=None,
+               randomVariation=False,
+               moveHandicap=None,
+               logging=False):
     Player.__init__(self, name)
     self.round_no = 0
     self.history = []
     self.random_boost = randomBoostFactor
-    self.f = open(name + ".log", mode='w')
+    self.f = None
+    if logging:
+      self.f = open(name + ".log", mode='w')
     self.random_variation = randomVariation
     self.boost_stats = []
     self.move_handicap = moveHandicap
     self.invalid_moves = 0
+
+  def clone(self):
+    return Aliostad(self.name,
+                    self.random_boost,
+                    self.random_variation,
+                    self.move_handicap,
+                    False)
 
   @staticmethod
   def transform_jsoncells_to_infos(cells):
@@ -371,9 +384,11 @@ class Aliostad(Player):
     self.history.append(h)
     if move is None:
       self.invalid_moves += 1
-      self.f.write('{} - None move from {} strategy\n'.format(self.round_no, h.strategy))
+      if self.f is not None:
+        self.f.write('{} - None move from {} strategy\n'.format(self.round_no, h.strategy))
     else:
-      self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
+      if self.f is not None:
+        self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
                                                                    h.strategy,
                                                                    move.fromCell,
                                                                    move.toCell,
