@@ -61,12 +61,12 @@ class SuperCentaurPlayer(Aliostad):
     if cellId not in world.uberCells:
       self.illegal_move_reward_by_agents[AgentType.Attack] = self.dont_own_move_reward
       if self.verbose:
-        print('{} - illegal move (dont own): {}'.format(world.round_no, cellId))
+        print('{} - illegal move (dont own): {}'.format(self.round_no, cellId))
       return None
     if not world.uberCells[cellId].canAttackOrExpand:
       self.illegal_move_reward_by_agents[AgentType.Attack] = self.cant_attack_move_reward
       if self.verbose:
-        print('{} - illegal move (cant attack): {}'.format(world.round_no, cellId))
+        print('{} - illegal move (cant attack): {}'.format(self.round_no, cellId))
       return None
     return cellId
 
@@ -141,7 +141,7 @@ class HierarchicalCentaurEnv(Env):
         print(' - {}: {} ({})'.format(name, self.leaderBoard[name], self.cellLeaderBoard[name]))
 
     playerView = PlayerView(self.game.round_no, info)
-    wrld = Aliostad.build_world(playerView.ownedCells, self.game.round_no)
+    wrld = Aliostad.build_world(playerView.ownedCells)
     self.world = wrld
     rewards = {name: (reward + self.centaur.illegal_move_reward_by_agents[name]) if name in self.centaur.illegal_move_reward_by_agents else
       reward for name in self.centaur.was_called}
@@ -164,12 +164,12 @@ class HierarchicalCentaurEnv(Env):
                     self.centaur]
     shuffle(self.players)
     self.game = Game(self.game_name, self.players, radius=self.radius,
-                     verbose=self.game_verbose, move_suffule=self.move_shuffle)
+                     verbose=self.game_verbose, move_shuffle=self.move_shuffle)
     hexagon_ui_api.games[self.game_name] = self.game
     self.game.start()
 
     playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(self.centaur_name))
-    wrld = Aliostad.build_world(playerView.ownedCells, self.game.round_no)
+    wrld = Aliostad.build_world(playerView.ownedCells)
     self.world = wrld
     return wrld
 

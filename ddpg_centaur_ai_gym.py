@@ -172,11 +172,11 @@ class SuperCentaurPlayer(Aliostad):
     cellId = self.actions[AgentType.Attack]
     if cellId not in world.uberCells:
       self.illegal_move_reward_by_agents[AgentType.Attack] = EnvDef.DONT_OWN_MOVE_REWARD
-      print('{} - illegal move (dont own): {}'.format(world.round_no, cellId))
+      print('{} - illegal move (dont own): {}'.format(self.round_no, cellId))
       return None
     if not world.uberCells[cellId].canAttackOrExpand:
       self.illegal_move_reward_by_agents[AgentType.Attack] = EnvDef.CANT_ATTACK_MOVE_REWARD
-      print('{} - illegal move (cant attack): {}'.format(world.round_no, cellId))
+      print('{} - illegal move (cant attack): {}'.format(self.round_no, cellId))
       return None
     #print ('{} - legal!!'.format(world.round_no))
     return cellId
