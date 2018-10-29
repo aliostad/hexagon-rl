@@ -107,7 +107,8 @@ class HexagonGame(AlphaGame):
     """
     y = action % self.rect_width
     x = action / self.rect_width
-    thid = GridCellId(x, y)
+    hid = GridCellId(x, y)
+    thid = hid.transpose(-(self.rect_width / 2), -(self.rect_width / 2))
     cellId = thid.to_cell_id()
     cells = game.board.get_cell_infos_for_player(player.name)
     world = Aliostad.build_world(cells)
@@ -167,7 +168,7 @@ class HexagonGame(AlphaGame):
     result[-1] = 1  # last cell is for NoValidMove
     for uc in world.uberCells.values():
       hid = GridCellId.fromHexCellId(uc.id)
-      thid = GridCellId(hid.x, hid.y).transpose(-self.rect_width / 2, -self.rect_width / 2)
+      thid = GridCellId(hid.x, hid.y).transpose(self.rect_width / 2, self.rect_width / 2)
       idx = thid.x * self.rect_width + thid.y
       if uc.canAttackOrExpand or uc.resources > 2:
         result[idx] = 1
@@ -200,8 +201,8 @@ class HexagonGame(AlphaGame):
 
   def getSymmetries(self, board, pi):
     # mirror, rotational
-    assert(len(pi) == self.n**2+1)  # 1 for pass
-    pi_board = np.reshape(pi[:-1], (self.n, self.n))
+    assert(len(pi) == self.rect_width**2+1)  # 1 for pass
+    pi_board = np.reshape(pi[:-1], (self.rect_width, self.rect_width))
     l = []
 
     for i in range(1, 5):
