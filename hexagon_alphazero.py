@@ -1,8 +1,12 @@
-import alpha_zero_general.Game
+import alpha_zero_general.Game, alpha_zero_general.NeuralNet
 from hexagon_agent import Aliostad, UberCell
 from hexagon_gaming import Game, Board, Cell, Player
 from numpy import np
 from square_grid import *
+from keras import Model
+from keras.layers import Conv2D, Dense, Input, Reshape, Flatten
+from keras.optimizers import Adam
+import os
 
 class PLayerIds:
   Player1 = 1
@@ -196,6 +200,62 @@ class HexagonGame(alpha_zero_general.Game):
     return l
 
   def stringRepresentation(self, board):
-    # 8x8 numpy array (canonical board)
     return board.tostring()
+
+
+class HexagonModel(alpha_zero_general.NeuralNet):
+
+  def __init__(self, game, lr=0.001, batch_size=100, epochs=10):
+    """
+
+    :type game: HexagonGame
+    """
+    input_shape = (game.rect_width, game.rect_width)
+    input = Input(shape=input_shape)
+    med = Reshape(input_shape + (1, ))(input)
+    med = Conv2D(128, (5, 5), padding='same', activation='relu')(med)
+    med = Conv2D(64, (3, 3), padding='same', activation='relu')(med)
+    med = Conv2D(16, (3, 3), padding='same', activation='relu')(med)
+    med = Conv2D(4, (3, 3), padding='same', activation='relu')(med)
+    med = Conv2D(1, (3, 3), padding='same', activation='tanh')(med)
+    pipe = Flatten()(med)
+    pi = Dense(game.getActionSize(), activation='softmax')
+    v = Dense(1, activation='tanh')
+    self.model = Model(inputs=[input], outputs=[pi, v])
+    self.model.compile(loss=['categorical_crossentropy','mean_squared_error'], optimizer=Adam(lr))
+    self.batch_size = batch_size
+    self.epochs = epochs
+
+  def train(self, examples):
+    input_boards, target_pis, target_vs = list(zip(*examples))
+    input_boards = np.asarray(input_boards)
+    target_pis = np.asarray(target_pis)
+    target_vs = np.asarray(target_vs)
+    self.model.fit(x=input_boards, y=[target_pis, target_vs],
+                   batch_size=self.batch_size, epochs=self.epochs)
+  def predict(self, board):
+    """
+    board: np array with board
+    """
+    # preparing input
+    board = board[np.newaxis, :, :]
+
+    # run
+    pi, v = self.nnet.model.predict(board)
+    return pi[0], v[0]
+
+  def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+    filepath = os.path.join(folder, filename)
+    if not os.path.exists(folder):
+      print("Checkpoint Directory does not exist! Making directory {}".format(folder))
+      os.mkdir(folder)
+    else:
+      print("Checkpoint Directory exists! ")
+    self.model.save_weights(filepath)
+
+  def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
+    filepath = os.path.join(folder, filename)
+    if not os.path.exists(filepath):
+      raise("No model in path '{}'".format(filepath))
+    self.model.load_weights(filepath)
 
