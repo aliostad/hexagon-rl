@@ -1,7 +1,9 @@
-import alpha_zero_general.Game, alpha_zero_general.NeuralNet
+from alpha_zero_general.Game import Game as AlphaGame
+from alpha_zero_general.NeuralNet import NeuralNet
+from alpha_zero_general.Coach import Coach
 from hexagon_agent import Aliostad, UberCell
 from hexagon_gaming import Game, Board, Cell, Player
-from numpy import np
+import numpy as np
 from square_grid import *
 from keras import Model
 from keras.layers import Conv2D, Dense, Input, Reshape, Flatten
@@ -14,7 +16,7 @@ class PLayerIds:
 
 class PlayerNames:
   Player1 = "1"
-  Player2 = "2"
+  Player2 = "-1"
 
 _board_cache = {}
 
@@ -22,11 +24,13 @@ _board_cache = {}
 def sameSign(a, b):
   return (a < 0 and b < 0) or (a > 0 and b > 0)
 
+def oppositeSign(a, b):
+  return (a < 0 and b > 0) or (a > 0 and b < 0)
 
 class AlphaAliostad(Aliostad):
 
   def __init__(self, name):
-    super(Aliostad, self).__init__(name)
+    Aliostad.__init__ (self, name)
     self.id = 'N/A'
 
 
@@ -43,7 +47,7 @@ def get_player_name_from_resource(value):
   else:
     return PlayerNames.Player2
 
-def hydrate_board_from_model(a, radius):
+def hydrate_board_from_model(a, radius, rect_width):
   """
 
   :type a: ndarray
@@ -54,14 +58,14 @@ def hydrate_board_from_model(a, radius):
     _board_cache[radius] = Board(radius)
   b = _board_cache[radius].clone()
   for cellId in b.cells:
-    thid = GridCellId.fromHexCellId(cellId)
+    hid = GridCellId.fromHexCellId(cellId)
+    thid = GridCellId(hid.x, hid.y).transpose(-rect_width / 2, -rect_width / 2)
     value = a[thid.x][thid.y]
     b.change_ownership(cellId, get_player_name_from_resource(value), abs(value))
   return b
 
 
-class HexagonGame(alpha_zero_general.Game):
-
+class HexagonGame(AlphaGame):
   def __init__(self, radius):
     self.radius = radius
     self.rect_width = radius * 2 - (radius % 2)
@@ -82,15 +86,15 @@ class HexagonGame(alpha_zero_general.Game):
     :param board: Board
     :return: ndarray
     """
-    result = np.array(self.model_input_shape)
+    result = np.zeros(self.model_input_shape)
 
     for c in board.cells.values():
       if c.owner != Cell.NoOwner:
         sign = int(c.owner)
         value = c.resources * sign
-        hid = GridCellId.fromHexCellId(cid)
-        thid = hid.transpose(self.spatial_input[0] / 2, self.spatial_input[1] / 2)
-        hector[thid.x][thid.y] = value
+        hid = GridCellId.fromHexCellId(c.id)
+        thid = hid.transpose(self.rect_width / 2, self.rect_width / 2)
+        result[thid.x][thid.y] = value
     return result
 
   def get_move_for_action(self, game, action, player):
@@ -107,7 +111,7 @@ class HexagonGame(alpha_zero_general.Game):
     cellId = thid.to_cell_id()
     cells = game.board.get_cell_infos_for_player(player.name)
     world = Aliostad.build_world(cells)
-    cellFrom = world.uberCells[cells]
+    cellFrom = world.uberCells[cellId]
     if cellFrom.canAttackOrExpand:
       return player.getAttack(world, cellId)
     else:
@@ -119,6 +123,7 @@ class HexagonGame(alpha_zero_general.Game):
     self.game = Game(str(self.game_no),
                      [AlphaAliostad(PlayerNames.Player1), AlphaAliostad(PlayerNames.Player2)],
                      self.radius)
+    self.game.start()
     return self._get_board_repr(self.game.board)
 
   def getNextState(self, board, player, action):
@@ -133,12 +138,14 @@ class HexagonGame(alpha_zero_general.Game):
     if action == self.NO_LEGAL_MOVE:
       return board, -player
 
-    hex_board = hydrate_board_from_model(board, self.radius)
+    hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
     g = self.game.clone()
     g.board = hex_board
     thePlayer = filter(lambda x: x.name == str(player), self.game.real_players)[0]
     move = self.get_move_for_action(g, action, thePlayer)
     succss, msg = g.board.try_transfer(move)
+    if player < 0:
+      g.board.increment_resources()
     if not succss:
       raise Exception(msg)
 
@@ -151,17 +158,16 @@ class HexagonGame(alpha_zero_general.Game):
     :param player: int
     :return:
     """
-    hex_board = hydrate_board_from_model(board, self.radius)
+    hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
     g = self.game.clone()
     g.board = hex_board
     cells = g.board.get_cell_infos_for_player(str(player))
     world = Aliostad.build_world(cells)
-    result = np.array(self.getActionSize())
+    result = np.zeros(self.getActionSize())
     result[-1] = 1  # last cell is for NoValidMove
-    if len(world.uberCells) < 2:  # no legal move possible
-      return result
     for uc in world.uberCells.values():
-      thid = GridCellId.fromHexCellId(uc.id)
+      hid = GridCellId.fromHexCellId(uc.id)
+      thid = GridCellId(hid.x, hid.y).transpose(-self.rect_width / 2, -self.rect_width / 2)
       idx = thid.x * self.rect_width + thid.y
       if uc.canAttackOrExpand or uc.resources > 2:
         result[idx] = 1
@@ -174,10 +180,19 @@ class HexagonGame(alpha_zero_general.Game):
     :type player: int
     :return:
     """
+    anySameSign = False
+    anyOppositeSign = False
     for v in board.flatten():
       if sameSign(v, player):
-        return True
-    return False
+        anySameSign = True
+      if oppositeSign(v, player):
+        anyOppositeSign = True
+    if anyOppositeSign and anySameSign:
+      return 0
+    elif anyOppositeSign:
+      return -1
+    else:
+      return 1
 
   def getCanonicalForm(self, board, player):
     # return state if player==1, else return -state if player==-1
@@ -203,7 +218,7 @@ class HexagonGame(alpha_zero_general.Game):
     return board.tostring()
 
 
-class HexagonModel(alpha_zero_general.NeuralNet):
+class HexagonModel(NeuralNet):
 
   def __init__(self, game, lr=0.001, batch_size=100, epochs=10):
     """
@@ -219,10 +234,10 @@ class HexagonModel(alpha_zero_general.NeuralNet):
     med = Conv2D(4, (3, 3), padding='same', activation='relu')(med)
     med = Conv2D(1, (3, 3), padding='same', activation='tanh')(med)
     pipe = Flatten()(med)
-    pi = Dense(game.getActionSize(), activation='softmax')
-    v = Dense(1, activation='tanh')
+    pi = Dense(game.getActionSize(), activation='softmax')(pipe)
+    v = Dense(1, activation='tanh')(pipe)
     self.model = Model(inputs=[input], outputs=[pi, v])
-    self.model.compile(loss=['categorical_crossentropy','mean_squared_error'], optimizer=Adam(lr))
+    self.model.compile(loss=['categorical_crossentropy', 'mean_squared_error'], optimizer=Adam(lr))
     self.batch_size = batch_size
     self.epochs = epochs
 
@@ -241,7 +256,7 @@ class HexagonModel(alpha_zero_general.NeuralNet):
     board = board[np.newaxis, :, :]
 
     # run
-    pi, v = self.nnet.model.predict(board)
+    pi, v = self.model.predict(board)
     return pi[0], v[0]
 
   def save_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
@@ -259,3 +274,34 @@ class HexagonModel(alpha_zero_general.NeuralNet):
       raise("No model in path '{}'".format(filepath))
     self.model.load_weights(filepath)
 
+class dotdict(dict):
+  def __getattr__(self, name):
+    return self[name]
+
+if __name__ == '__main__':
+
+  args = dotdict({
+    'numIters': 100,
+    'numEps': 100,
+    'tempThreshold': 15,
+    'updateThreshold': 0.6,
+    'maxlenOfQueue': 200000,
+    'numMCTSSims': 25,
+    'arenaCompare': 40,
+    'cpuct': 1,
+
+    'checkpoint': './temp/',
+    'load_model': False,
+    'load_folder_file': ('/dev/models/8x100x50', 'best.pth.tar'),
+    'numItersForTrainExamplesHistory': 20,
+
+  })
+  g = HexagonGame(3)
+  nnet = HexagonModel(g)
+
+
+  c = Coach(g, nnet, args)
+  if args.load_model:
+    print("Load trainExamples from file")
+    c.loadTrainExamples()
+  c.learn()
