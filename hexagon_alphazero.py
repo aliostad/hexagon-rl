@@ -61,7 +61,7 @@ def hydrate_board_from_model(a, radius, rect_width):
     hid = GridCellId.fromHexCellId(cellId)
     thid = GridCellId(hid.x, hid.y).transpose(-rect_width / 2, -rect_width / 2)
     value = a[thid.x][thid.y]
-    b.change_ownership(cellId, get_player_name_from_resource(value), abs(value))
+    b.change_ownership(cellId, get_player_name_from_resource(value), int(abs(value)))
   return b
 
 
