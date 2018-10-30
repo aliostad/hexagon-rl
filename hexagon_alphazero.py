@@ -268,7 +268,7 @@ class HexagonGame(AlphaGame):
 
 class HexagonModel(NeuralNet):
 
-  def __init__(self, game, lr=0.001, batch_size=100, epochs=10):
+  def __init__(self, game, lr=0.001, batch_size=100, epochs=1000):
     """
 
     :type game: HexagonGame
@@ -329,8 +329,8 @@ class dotdict(dict):
 if __name__ == '__main__':
 
   args = dotdict({
-    'numIters': 1000,
-    'numEps': 100,
+    'numIters': 10,
+    'numEps': 5,
     'tempThreshold': 5,
     'updateThreshold': 0.6,
     'maxlenOfQueue': 200000,
