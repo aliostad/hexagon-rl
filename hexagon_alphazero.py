@@ -150,7 +150,8 @@ class HexagonGame(AlphaGame):
     move = self.get_move_for_action(g, action, thePlayer)
     succss, msg = g.board.try_transfer(move)
     if player < 0:
-      g.board.increment_resources()
+      self.game.board.increment_resources()
+      self.game.round_no += 1
     if not succss:
       raise Exception(msg)
 
@@ -189,19 +190,26 @@ class HexagonGame(AlphaGame):
     :type player: int
     :return:
     """
-    anySameSign = False
-    anyOppositeSign = False
+
+    sameSignCount = 0
+    oppositeSignCount = 0
     for v in board.flatten():
       if sameSign(v, player):
-        anySameSign = True
+        sameSignCount += 1
       if oppositeSign(v, player):
-        anyOppositeSign = True
+        oppositeSignCount += 1
+
     if anyOppositeSign and anySameSign:
+      if self.game.round_no > 200:
+        return 1 if sameSignCount > oppositeSignCount else -1
+      else:
       return 0
     elif anyOppositeSign:
       return -1
     else:
       return 1
+
+
 
   def getCanonicalForm(self, board, player):
     # return state if player==1, else return -state if player==-1
