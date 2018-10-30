@@ -221,22 +221,25 @@ class HexagonGame(AlphaGame):
 
     sameSignCount = 0
     oppositeSignCount = 0
+    sameSignSum = 0
+    oppositeSignSum = 0
     for v in board.flatten():
       if sameSign(v, player):
         sameSignCount += 1
+        sameSignSum += abs(v)
       if oppositeSign(v, player):
         oppositeSignCount += 1
+        oppositeSignSum += v
 
     if oppositeSignCount > 0 and sameSignCount > 0:
       if self.game.round_no > 200:
-        return 1 if sameSignCount > oppositeSignCount else -1
+        return 1 if (sameSignCount + (sameSignSum/100)) > (oppositeSignCount + (oppositeSignSum / 100)) else -1
       else:
         return 0
     elif oppositeSignCount > 0:
       return -1
     else:
       return 1
-
 
 
   def getCanonicalForm(self, board, player):
