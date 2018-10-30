@@ -2,7 +2,7 @@ from alpha_zero_general.Game import Game as AlphaGame
 from alpha_zero_general.NeuralNet import NeuralNet
 from alpha_zero_general.Coach import Coach
 from hexagon_agent import Aliostad, UberCell
-from hexagon_gaming import Game, Board, Cell, Player
+from hexagon_gaming import Game, Board, Cell, Player, Move
 import numpy as np
 from square_grid import *
 from keras import Model
@@ -61,7 +61,7 @@ def hydrate_board_from_model(a, radius, rect_width):
   b = _board_cache[radius].clone()
   for cellId in b.cells:
     hid = GridCellId.fromHexCellId(cellId)
-    thid = GridCellId(hid.x, hid.y).transpose(-rect_width / 2, -rect_width / 2)
+    thid = hid.transpose(rect_width / 2, rect_width / 2)
     value = a[thid.x][thid.y]
     b.change_ownership(cellId, get_player_name_from_resource(value), int(abs(value)))
   return b
@@ -218,7 +218,7 @@ class HexagonGame(AlphaGame):
     :type player: int
     :return:
     """
-
+    result = 0
     sameSignCount = 0
     oppositeSignCount = 0
     sameSignSum = 0
@@ -233,14 +233,19 @@ class HexagonGame(AlphaGame):
 
     if oppositeSignCount > 0 and sameSignCount > 0:
       if self.game.round_no > 200:
-        return 1 if (sameSignCount + (sameSignSum/100)) > (oppositeSignCount + (oppositeSignSum / 100)) else -1
+        result = 1 if (sameSignCount + (sameSignSum/100)) > (oppositeSignCount + (oppositeSignSum / 100)) else -1
       else:
-        return 0
+        result = 0
     elif oppositeSignCount > 0:
-      return -1
+      result = -1
     else:
-      return 1
+      result = 1
 
+    if result == -1:
+      print('Player {} lost!'.format(player))
+    elif result == 1:
+      print('Player {} won!'.format(player))
+    return result
 
   def getCanonicalForm(self, board, player):
     # return state if player==1, else return -state if player==-1
@@ -326,6 +331,32 @@ class dotdict(dict):
   def __getattr__(self, name):
     return self[name]
 
+class AliostadPlayer:
+
+  def __init__(self, game):
+    """
+
+    :type game: HexagonGame
+    """
+    self.game = game
+    self.aliostad = Aliostad()
+
+  def play(self, board):
+    """
+
+    :type board: ndarray
+    :return:
+    """
+    hex_board = hydrate_board_from_model(board, self.game.game.radius, self.game.rect_width)
+    cells = hex_board.get_cell_infos_for_player("1")
+    world = Aliostad.build_world(cells)
+    move = self.aliostad.movex(world)
+    cid = move.fromCell
+    hid = GridCellId.fromHexCellId(cid)
+    thid = hid.transpose(self.game.rect_width / 2, self.game.rect_width / 2)
+    idx = thid.x * self.game.rect_width + thid.y
+    return idx
+
 if __name__ == '__main__':
 
   args = dotdict({
@@ -335,18 +366,18 @@ if __name__ == '__main__':
     'updateThreshold': 0.6,
     'maxlenOfQueue': 200000,
     'numMCTSSims': 25,
-    'arenaCompare': 40,
+    'arenaCompare': 3,
     'cpuct': 1,
 
     'checkpoint': './temp/',
     'load_model': False,
-    'load_folder_file': ('/dev/models/8x100x50', 'best.pth.tar'),
-    'numItersForTrainExamplesHistory': 20,
-
+    'load_folder_file': ('./temp/', 'temp.pth.tar'),
+    'numItersForTrainExamplesHistory': 20
   })
-  g = HexagonGame(3)
-  nnet = HexagonModel(g)
-  c = Coach(g, nnet, args)
+
+  g = HexagonGame(radius=3)
+  model = HexagonModel(g)
+  c = Coach(g, model, args)
   hexagon_ui_api.run_in_background()
 
   if args.load_model:
