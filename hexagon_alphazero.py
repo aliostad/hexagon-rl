@@ -118,7 +118,8 @@ class HexagonGame(AlphaGame):
     cells = game.board.get_cell_infos_for_player(player.name)
     world = Aliostad.build_world(cells)
     if cellId not in world.uberCells:
-      print ''
+      print('Not in: {}'.format(cellId))
+      return None
     cellFrom = world.uberCells[cellId]
     if cellFrom.canAttackOrExpand:
       return player.getAttack(world, cellId)
@@ -159,15 +160,16 @@ class HexagonGame(AlphaGame):
 
     thePlayer = filter(lambda x: x.name == str(player), self.game.real_players)[0]
     move = self.get_move_for_action(g, action, thePlayer)
-    success, msg = g.board.try_transfer(move)
+    if move not None:
+      success, msg = g.board.try_transfer(move)
 
-    if player < 0:
-      g.board.increment_resources()
-      g.round_no += 1
-      if self.verbose:
-        print('round {}'.format(self.game.round_no))
-    if not success:
-      print(msg)
+      if player < 0:
+        g.board.increment_resources()
+        g.round_no += 1
+        if self.verbose:
+          print('round {}'.format(self.game.round_no))
+      if not success:
+        print(msg)
 
     return self._get_board_repr(g.board), -player
 
