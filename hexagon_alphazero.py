@@ -199,12 +199,12 @@ class HexagonGame(AlphaGame):
       if oppositeSign(v, player):
         oppositeSignCount += 1
 
-    if anyOppositeSign and anySameSign:
+    if oppositeSignCount > 0 and sameSignCount > 0:
       if self.game.round_no > 200:
         return 1 if sameSignCount > oppositeSignCount else -1
       else:
         return 0
-    elif anyOppositeSign:
+    elif oppositeSignCount > 0:
       return -1
     else:
       return 1
