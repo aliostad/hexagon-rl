@@ -160,7 +160,7 @@ class HexagonGame(AlphaGame):
 
     thePlayer = filter(lambda x: x.name == str(player), self.game.real_players)[0]
     move = self.get_move_for_action(g, action, thePlayer)
-    if move not None:
+    if move is not None:
       success, msg = g.board.try_transfer(move)
 
       if player < 0:
