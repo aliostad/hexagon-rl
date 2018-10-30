@@ -8,7 +8,9 @@ from square_grid import *
 from keras import Model
 from keras.layers import Conv2D, Dense, Input, Reshape, Flatten
 from keras.optimizers import Adam
+import hexagon_ui_api
 import os
+
 
 class PLayerIds:
   Player1 = 1
@@ -66,7 +68,7 @@ def hydrate_board_from_model(a, radius, rect_width):
 
 
 class HexagonGame(AlphaGame):
-  def __init__(self, radius, debug=False):
+  def __init__(self, radius, verbose=True, debug=False):
     self.radius = radius
     self.rect_width = radius * 2 - (radius % 2)
     self.model_input_shape = (self.rect_width, self.rect_width)
@@ -75,6 +77,7 @@ class HexagonGame(AlphaGame):
     self.NO_LEGAL_MOVE = self.rect_width ** 2
     self.validMovesHistory = []  # for debugging
     self.debug = debug
+    self.verbose = verbose
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
@@ -124,14 +127,18 @@ class HexagonGame(AlphaGame):
 
 
   def getInitBoard(self):
+
     self.game_no += 1
-    self.game = Game(str(self.game_no),
+    self.game = Game('1',
                      [AlphaAliostad(PlayerNames.Player1), AlphaAliostad(PlayerNames.Player2)],
                      self.radius)
     self.game.start()
+    hexagon_ui_api.games['1'] = self.game
+    if self.verbose:
+      print("New game: {}".format(self.game_no))
     return self._get_board_repr(self.game.board)
 
-  def getNextState(self, board, player, action):
+  def getNextState(self, board, player, action, executing=False):
     """
 
     :type board: ndarray
@@ -144,16 +151,23 @@ class HexagonGame(AlphaGame):
       return board, -player
 
     hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
-    g = self.game.clone()
-    g.board = hex_board
+    if executing:
+      g = self.game
+    else:
+      g = self.game.clone()
+      g.board = hex_board
+
     thePlayer = filter(lambda x: x.name == str(player), self.game.real_players)[0]
     move = self.get_move_for_action(g, action, thePlayer)
-    succss, msg = g.board.try_transfer(move)
+    success, msg = g.board.try_transfer(move)
+
     if player < 0:
-      self.game.board.increment_resources()
-      self.game.round_no += 1
-    if not succss:
-      raise Exception(msg)
+      g.board.increment_resources()
+      g.round_no += 1
+      if self.verbose:
+        print('round {}'.format(self.game.round_no))
+    if not success:
+      print(msg)
 
     return self._get_board_repr(g.board), -player
 
@@ -171,16 +185,28 @@ class HexagonGame(AlphaGame):
     cells = g.board.get_cell_infos_for_player(str(player))
     world = Aliostad.build_world(cells)
     result = np.zeros(self.getActionSize())
+    if self.debug:
+      self.validMovesHistory.append(result)
+
+    # first attack
     for uc in world.uberCells.values():
       hid = GridCellId.fromHexCellId(uc.id)
       thid = GridCellId(hid.x, hid.y).transpose(self.rect_width / 2, self.rect_width / 2)
       idx = thid.x * self.rect_width + thid.y
-      if uc.canAttackOrExpand or uc.resources > 2:
+      if uc.canAttackOrExpand:
         result[idx] = 1
-    if result.sum() == 0:
+    if result.sum() > 0:
+      return result
+    elif len(world.uberCells) > 1:
+      # boost
+      for uc in world.uberCells.values():
+        hid = GridCellId.fromHexCellId(uc.id)
+        thid = GridCellId(hid.x, hid.y).transpose(self.rect_width / 2, self.rect_width / 2)
+        idx = thid.x * self.rect_width + thid.y
+        if uc.resources > 2:
+          result[idx] = 1
+    else:
       result[-1] = 1  # last cell is for NoValidMove
-    if self.debug:
-      self.validMovesHistory.append(result)
     return result
 
   def getGameEnded(self, board, player):
@@ -315,10 +341,11 @@ if __name__ == '__main__':
   })
   g = HexagonGame(3)
   nnet = HexagonModel(g)
-
-
   c = Coach(g, nnet, args)
+  hexagon_ui_api.run_in_background()
+
   if args.load_model:
     print("Load trainExamples from file")
     c.loadTrainExamples()
+
   c.learn()

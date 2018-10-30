@@ -33,12 +33,13 @@ class Game():
         """
         pass
 
-    def getNextState(self, board, player, action):
+    def getNextState(self, board, player, action, executing):
         """
         Input:
             board: current board
             player: current player (1 or -1)
             action: action taken by current player
+            executing: whether it is during search or execution of master board
 
         Returns:
             nextBoard: board after applying action

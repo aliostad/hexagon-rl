@@ -50,7 +50,7 @@ class Arena():
             if valids[action]==0:
                 print(action)
                 assert valids[action] >0
-            board, curPlayer = self.game.getNextState(board, curPlayer, action)
+            board, curPlayer = self.game.getNextState(board, curPlayer, action, executing=True)
         if verbose:
             assert(self.display)
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))

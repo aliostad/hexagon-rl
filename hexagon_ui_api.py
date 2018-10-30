@@ -5,6 +5,7 @@ import threading
 from hexagon_gaming import *
 import jsonpickle
 import logging
+import json
 
 games = {}
 t = time.time()
@@ -43,6 +44,7 @@ def get_game_status(gameId):
     game = games[gameId]
     snapshot = GameSnapshot(game)
     return jsonify(json.loads(jsonpickle.dumps(snapshot)))
+
   else:
     return jsonify("game not valid"), 404
 
