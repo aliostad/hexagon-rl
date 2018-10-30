@@ -66,13 +66,15 @@ def hydrate_board_from_model(a, radius, rect_width):
 
 
 class HexagonGame(AlphaGame):
-  def __init__(self, radius):
+  def __init__(self, radius, debug=False):
     self.radius = radius
     self.rect_width = radius * 2 - (radius % 2)
     self.model_input_shape = (self.rect_width, self.rect_width)
     self.game = None
     self.game_no = 0
     self.NO_LEGAL_MOVE = self.rect_width ** 2
+    self.validMovesHistory = []  # for debugging
+    self.debug = debug
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
@@ -112,6 +114,8 @@ class HexagonGame(AlphaGame):
     cellId = thid.to_cell_id()
     cells = game.board.get_cell_infos_for_player(player.name)
     world = Aliostad.build_world(cells)
+    if cellId not in world.uberCells:
+      print ''
     cellFrom = world.uberCells[cellId]
     if cellFrom.canAttackOrExpand:
       return player.getAttack(world, cellId)
@@ -152,26 +156,30 @@ class HexagonGame(AlphaGame):
 
     return self._get_board_repr(g.board), -player
 
-  def getValidMoves(self, board, player):
+  def getValidMoves(self, cannonicalBoard, player):
     """
 
-    :type board: ndarray
+    :type cannonicalBoard: ndarray
     :param player: int
     :return:
     """
+    board = cannonicalBoard*player
     hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
     g = self.game.clone()
     g.board = hex_board
     cells = g.board.get_cell_infos_for_player(str(player))
     world = Aliostad.build_world(cells)
     result = np.zeros(self.getActionSize())
-    result[-1] = 1  # last cell is for NoValidMove
     for uc in world.uberCells.values():
       hid = GridCellId.fromHexCellId(uc.id)
       thid = GridCellId(hid.x, hid.y).transpose(self.rect_width / 2, self.rect_width / 2)
       idx = thid.x * self.rect_width + thid.y
       if uc.canAttackOrExpand or uc.resources > 2:
         result[idx] = 1
+    if result.sum() == 0:
+      result[-1] = 1  # last cell is for NoValidMove
+    if self.debug:
+      self.validMovesHistory.append(result)
     return result
 
   def getGameEnded(self, board, player):
@@ -197,7 +205,7 @@ class HexagonGame(AlphaGame):
 
   def getCanonicalForm(self, board, player):
     # return state if player==1, else return -state if player==-1
-    return player*board
+    return board*player
 
   def getSymmetries(self, board, pi):
     # mirror, rotational
@@ -283,7 +291,7 @@ if __name__ == '__main__':
 
   args = dotdict({
     'numIters': 100,
-    'numEps': 100,
+    'numEps': 10,
     'tempThreshold': 15,
     'updateThreshold': 0.6,
     'maxlenOfQueue': 200000,
