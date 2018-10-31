@@ -368,7 +368,19 @@ class CentaurPlayer:
     self.game = game
     self.nnet = nnet
   
-
+  def play(self, board):
+    """
+    
+    :type board: ndarray
+    :return: 
+    """
+    valids = self.game.getValidMoves(board, 1)
+    pi, v = self.nnet.model.predict([board])
+    pi = pi[0]
+    safa = valids * pi
+    return np.argmax(safa)
+    
+    
 if __name__ == '__main__':
 
   args = dotdict({
