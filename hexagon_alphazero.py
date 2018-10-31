@@ -1,8 +1,10 @@
 from alpha_zero_general.Game import Game as AlphaGame
 from alpha_zero_general.NeuralNet import NeuralNet
 from alpha_zero_general.Coach import Coach
+from alpha_zero_general.Arena import Arena
+from alpha_zero_general.MCTS import MCTS
 from hexagon_agent import Aliostad, UberCell
-from hexagon_gaming import Game, Board, Cell, Player, Move
+from hexagon_gaming import Game, Board, Cell, Player, Move, CellId
 import numpy as np
 from square_grid import *
 from keras import Model
@@ -10,6 +12,7 @@ from keras.layers import Conv2D, Dense, Input, Reshape, Flatten
 from keras.optimizers import Adam
 import hexagon_ui_api
 import os
+import sys
 
 
 class PLayerIds:
@@ -22,18 +25,28 @@ class PlayerNames:
 
 _board_cache = {}
 
-
 def sameSign(a, b):
   return (a < 0 and b < 0) or (a > 0 and b > 0)
 
 def oppositeSign(a, b):
   return (a < 0 and b > 0) or (a > 0 and b < 0)
 
-class AlphaAliostad(Aliostad):
+class PlayerNameMapper:
+  def __init__(self):
+    self.hex_to_alpha = {}
+    self.alpha_to_hex = {}
+    
+  def register_player_name(self, hex_name, alpha_name):
+    self.alpha_to_hex[alpha_name] = hex_name
+    self.hex_to_alpha[hex_name] = alpha_name
+  
+  def get_hex_name(self, alpha_name):
+    return self.alpha_to_hex[alpha_name]
+  
+  def get_alpha_name(self, hex_name):
+    return self.hex_to_alpha[hex_name]
 
-  def __init__(self, name):
-    Aliostad.__init__ (self, name)
-    self.id = 'N/A'
+_player_name_mapper = PlayerNameMapper()
 
 
 def get_player_name_from_resource(value):
@@ -45,9 +58,9 @@ def get_player_name_from_resource(value):
   if value == 0:
     return Cell.NoOwner
   elif value > 0:
-    return PlayerNames.Player1
+    return _player_name_mapper.get_hex_name(PlayerNames.Player1)
   else:
-    return PlayerNames.Player2
+    return _player_name_mapper.get_hex_name(PlayerNames.Player2)
 
 def hydrate_board_from_model(a, radius, rect_width):
   """
@@ -60,8 +73,7 @@ def hydrate_board_from_model(a, radius, rect_width):
     _board_cache[radius] = Board(radius)
   b = _board_cache[radius].clone()
   for cellId in b.cells:
-    hid = GridCellId.fromHexCellId(cellId)
-    thid = hid.transpose(rect_width / 2, rect_width / 2)
+    thid = get_thid_from_cellId(cellId, rect_width)
     value = a[thid.x][thid.y]
     b.change_ownership(cellId, get_player_name_from_resource(value), int(abs(value)))
   return b
@@ -95,10 +107,9 @@ class HexagonGame(AlphaGame):
 
     for c in board.cells.values():
       if c.owner != Cell.NoOwner:
-        sign = int(c.owner)
+        sign = int(_player_name_mapper.get_alpha_name(c.owner))
         value = c.resources * sign
-        hid = GridCellId.fromHexCellId(c.id)
-        thid = hid.transpose(self.rect_width / 2, self.rect_width / 2)
+        thid = get_thid_from_cellId(c.id, self.rect_width)
         result[thid.x][thid.y] = value
     return result
 
@@ -110,11 +121,7 @@ class HexagonGame(AlphaGame):
     :type player: AlphaAliostad
     :return:
     """
-    y = action % self.rect_width
-    x = action / self.rect_width
-    hid = GridCellId(x, y)
-    thid = hid.transpose(-(self.rect_width / 2), -(self.rect_width / 2))
-    cellId = thid.to_cell_id()
+    cellId = get_cellId_from_index(action, self.rect_width)
     cells = game.board.get_cell_infos_for_player(player.name)
     world = Aliostad.build_world(cells)
     if cellId not in world.uberCells:
@@ -131,7 +138,8 @@ class HexagonGame(AlphaGame):
 
     self.game_no += 1
     self.game = Game('1',
-                     [AlphaAliostad(PlayerNames.Player1), AlphaAliostad(PlayerNames.Player2)],
+                     [Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player1)), 
+                      Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player2))],
                      self.radius)
     self.game.start()
     hexagon_ui_api.games['1'] = self.game
@@ -158,7 +166,7 @@ class HexagonGame(AlphaGame):
       g = self.game.clone()
       g.board = hex_board
 
-    thePlayer = filter(lambda x: x.name == str(player), self.game.real_players)[0]
+    thePlayer = filter(lambda x: x.name == _player_name_mapper.get_hex_name(str(player)), self.game.real_players)[0]
     move = self.get_move_for_action(g, action, thePlayer)
     if move is not None:
       success, msg = g.board.try_transfer(move)
@@ -167,7 +175,7 @@ class HexagonGame(AlphaGame):
         g.board.increment_resources()
         g.round_no += 1
         if self.verbose:
-          print('round {}'.format(self.game.round_no))
+          print '\rround {}'.format(self.game.round_no),
       if not success:
         print(msg)
 
@@ -184,17 +192,15 @@ class HexagonGame(AlphaGame):
     hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
     g = self.game.clone()
     g.board = hex_board
-    cells = g.board.get_cell_infos_for_player(str(player))
+    cells = g.board.get_cell_infos_for_player(_player_name_mapper.get_hex_name(str(player)))
     world = Aliostad.build_world(cells)
     result = np.zeros(self.getActionSize())
     if self.debug:
       self.validMovesHistory.append(result)
 
     # first attack
-    for uc in world.uberCells.values():
-      hid = GridCellId.fromHexCellId(uc.id)
-      thid = GridCellId(hid.x, hid.y).transpose(self.rect_width / 2, self.rect_width / 2)
-      idx = thid.x * self.rect_width + thid.y
+    for uc in world.uberCells.values():     
+      idx = get_index_from_cellId(uc.id, self.rect_width)
       if uc.canAttackOrExpand:
         result[idx] = 1
     if result.sum() > 0:
@@ -202,9 +208,7 @@ class HexagonGame(AlphaGame):
     elif len(world.uberCells) > 1:
       # boost
       for uc in world.uberCells.values():
-        hid = GridCellId.fromHexCellId(uc.id)
-        thid = GridCellId(hid.x, hid.y).transpose(self.rect_width / 2, self.rect_width / 2)
-        idx = thid.x * self.rect_width + thid.y
+        idx = get_index_from_cellId(uc.id)
         if uc.resources > 2:
           result[idx] = 1
     else:
@@ -279,16 +283,16 @@ class HexagonModel(NeuralNet):
     :type game: HexagonGame
     """
     input_shape = (game.rect_width, game.rect_width)
-    input = Input(shape=input_shape)
+    input = Input(shape=input_shape, name='board_input')
     med = Reshape(input_shape + (1, ))(input)
-    med = Conv2D(128, (5, 5), padding='same', activation='relu')(med)
-    med = Conv2D(64, (3, 3), padding='same', activation='relu')(med)
-    med = Conv2D(16, (3, 3), padding='same', activation='relu')(med)
-    med = Conv2D(4, (3, 3), padding='same', activation='relu')(med)
-    med = Conv2D(1, (3, 3), padding='same', activation='tanh')(med)
+    med = Conv2D(128, (5, 5), padding='same', activation='relu', name='5x5-128')(med)
+    med = Conv2D(64, (3, 3), padding='same', activation='relu', name='3x3-64')(med)
+    med = Conv2D(16, (3, 3), padding='same', activation='relu', name='3x3-16')(med)
+    med = Conv2D(4, (3, 3), padding='same', activation='relu', name='3x3-4')(med)
+    med = Conv2D(1, (3, 3), padding='same', activation='tanh', name='3x3-1')(med)
     pipe = Flatten()(med)
-    pi = Dense(game.getActionSize(), activation='softmax')(pipe)
-    v = Dense(1, activation='tanh')(pipe)
+    pi = Dense(game.getActionSize(), activation='softmax', name='out_pi')(pipe)
+    v = Dense(1, activation='tanh', name='out_v')(pipe)
     self.model = Model(inputs=[input], outputs=[pi, v])
     self.model.compile(loss=['categorical_crossentropy', 'mean_squared_error'], optimizer=Adam(lr))
     self.batch_size = batch_size
@@ -339,7 +343,7 @@ class AliostadPlayer:
     :type game: HexagonGame
     """
     self.game = game
-    self.aliostad = Aliostad()
+    self.aliostad = Aliostad('aliostad')
 
   def play(self, board):
     """
@@ -348,18 +352,16 @@ class AliostadPlayer:
     :return:
     """
     hex_board = hydrate_board_from_model(board, self.game.game.radius, self.game.rect_width)
-    cells = hex_board.get_cell_infos_for_player("1")
+    cells = hex_board.get_cell_infos_for_player(self.aliostad.name)
     world = Aliostad.build_world(cells)
     move = self.aliostad.movex(world)
     cid = move.fromCell
-    hid = GridCellId.fromHexCellId(cid)
-    thid = hid.transpose(self.game.rect_width / 2, self.game.rect_width / 2)
-    idx = thid.x * self.game.rect_width + thid.y
+    idx = get_index_from_cellId(cid, self.game.rect_width)
     return idx
 
 class CentaurPlayer:
   
-  def __init__(self, game, nnet):
+  def __init__(self, game, nnet, args):
     """
     
     :type game: HexagonGame
@@ -367,6 +369,7 @@ class CentaurPlayer:
     """
     self.game = game
     self.nnet = nnet
+    self.mcts = MCTS(game, nnet, args)
   
   def play(self, board):
     """
@@ -374,11 +377,7 @@ class CentaurPlayer:
     :type board: ndarray
     :return: 
     """
-    valids = self.game.getValidMoves(board, 1)
-    pi, v = self.nnet.model.predict([board])
-    pi = pi[0]
-    safa = valids * pi
-    return np.argmax(safa)
+    return np.argmax(self.mcts.getActionProb(board, temp=0))
     
     
 if __name__ == '__main__':
@@ -399,13 +398,38 @@ if __name__ == '__main__':
     'numItersForTrainExamplesHistory': 20
   })
 
+  train = True
+  test = False
+  
+  if len(sys.argv) > 1 and sys.argv[1] == 'test':
+    train = False
+    test = True
+
   g = HexagonGame(radius=3)
   model = HexagonModel(g)
-  c = Coach(g, model, args)
+
   hexagon_ui_api.run_in_background()
 
-  if args.load_model:
-    print("Load trainExamples from file")
-    c.loadTrainExamples()
+  if train:
+    
+    _player_name_mapper.register_player_name('alpha1', PlayerNames.Player1)
+    _player_name_mapper.register_player_name('alpha2', PlayerNames.Player2)
 
-  c.learn()
+    c = Coach(g, model, args)
+  
+    if args.load_model:
+      print("Load trainExamples from file")
+      c.loadTrainExamples()
+  
+    c.learn()
+  
+  if test:
+    _player_name_mapper.register_player_name('aliostad', PlayerNames.Player1)
+    _player_name_mapper.register_player_name('centaur', PlayerNames.Player2)
+
+    model.load_checkpoint('temp', 'best.pth.tar')
+    aliostad = AliostadPlayer(g)
+    centaur = CentaurPlayer(g, model, args)
+    
+    arena = Arena(aliostad.play, centaur.play, g)
+    print(arena.playGames(2, verbose=False))

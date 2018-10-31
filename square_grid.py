@@ -10,7 +10,7 @@
     1     x - x - x - x - x - x
 
        -2  -1  0   1   2   3
-    -2  x - x - x - x - x - x
+    -2  x - x - x - x - x - xm
          \ / \ / \ / \ / \ / \
     -1    x - x - x - x - x - x
          / \ / \ / \ / \ / \ /
@@ -92,3 +92,53 @@ class GridCellId():
 
   def __repr__(self):
     return "{}_{}".format(self.x, self.y)
+
+
+def get_thid_from_cellId(cid, rect_width):
+  """
+
+  :type cid: CellId
+  :type rect_width: int
+  :return:
+  """
+  hid = GridCellId.fromHexCellId(cid)
+  thid = hid.transpose(rect_width / 2, rect_width / 2)
+  return thid
+
+
+def get_index_from_cellId(cid, rect_width):
+  """
+
+  :type cid: CellId
+  :type rect_width: int
+  :return:
+  """
+  thid = get_thid_from_cellId(cid, rect_width)
+  idx = thid.x * rect_width + thid.y
+  return idx
+
+
+def get_cellId_from_hid(hid, rect_width):
+  """
+
+  :type index: GridCellId
+  :type rect_width: int
+  :return:
+  """
+  thid = hid.transpose(-(rect_width / 2), -(rect_width / 2))
+  cellId = thid.to_cell_id()
+  return cellId
+
+
+def get_cellId_from_index(index, rect_width):
+  """
+
+  :type index: int
+  :type rect_width: int
+  :return:
+  """
+  y = index % rect_width
+  x = index / rect_width
+  hid = GridCellId(x, y)
+  return get_cellId_from_hid(hid, rect_width)
+

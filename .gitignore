@@ -42,3 +42,4 @@ nosetests.xml
 *.h5*
 .idea/
 train_data/
+temp/
