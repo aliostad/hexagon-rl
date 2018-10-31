@@ -273,7 +273,7 @@ class HexagonGame(AlphaGame):
 
 class HexagonModel(NeuralNet):
 
-  def __init__(self, game, lr=0.001, batch_size=100, epochs=1000):
+  def __init__(self, game, lr=0.003, batch_size=100, epochs=300):
     """
 
     :type game: HexagonGame
@@ -356,6 +356,18 @@ class AliostadPlayer:
     thid = hid.transpose(self.game.rect_width / 2, self.game.rect_width / 2)
     idx = thid.x * self.game.rect_width + thid.y
     return idx
+
+class CentaurPlayer:
+  
+  def __init__(self, game, nnet):
+    """
+    
+    :type game: HexagonGame
+    :type nnet: HexagonModel
+    """
+    self.game = game
+    self.nnet = nnet
+  
 
 if __name__ == '__main__':
 
