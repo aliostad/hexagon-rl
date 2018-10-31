@@ -1,5 +1,4 @@
-import json
-
+from copy import deepcopy
 class CellId:
   _poleCache = {}
 
@@ -145,6 +144,8 @@ class Cell:
   def increment_resources(self):
     if self.owner != Cell.NoOwner and self.resources < Cell.MaximumResource:
       self.resources += 1
+  def clone(self):
+    return Cell(self.id, self.owner, self.resources, deepcopy(self.neighbours))
 
 
 class BoardSnapshot:
@@ -174,38 +175,42 @@ class Board:
         l.append(CellId(nwes, row))
     return l
 
-  def __init__(self, radius):
+  def __init__(self, radius, cells=None):
     """
     :type radius: int
+    :type cells: dict of CellId
     """
     self.radius = radius
     self.diameter = radius*2 - 1
     self.ids = Board.build_ids_for_radius(radius)
     self.cells = {}
 
-    for id in self.ids:
-      self.cells[id] = Cell(id, Cell.NoOwner, 0, {})
+    if cells is None:
+      for id in self.ids:
+        self.cells[id] = Cell(id, Cell.NoOwner, 0, {})
 
-    #add normal neighbours
-    for id in self.cells:
-      self.cells[id].neighbours = {}.fromkeys(filter(lambda x: x in self.cells, id.get_neighbours()))
+      #add normal neighbours
+      for id in self.cells:
+        self.cells[id].neighbours = {}.fromkeys(filter(lambda x: x in self.cells, id.get_neighbours()))
 
-    # add edge wrap-around neighbours
-    for cid in filter(lambda k: len(self.cells[k].neighbours) < 6, self.cells):
-      if cid.is_pole(radius):
+      # add edge wrap-around neighbours
+      for cid in filter(lambda k: len(self.cells[k].neighbours) < 6, self.cells):
+        if cid.is_pole(radius):
+          op = cid.get_opposite()
+          self.cells[cid].neighbours[op] = None  # add
+          for nid in filter(lambda x: x.distance_to_centre == op.distance_to_centre, op.get_neighbours()):
+            self.cells[cid].neighbours[nid] = None  # add
+        else:
+          op = cid.get_opposite()
+          self.cells[cid].neighbours[op] = None  # add
+
+      # now sort those having 5. They will end up with 7 neighbours!
+      for cid in filter(lambda x: len(self.cells[x].neighbours) < 6, self.cells):
         op = cid.get_opposite()
-        self.cells[cid].neighbours[op] = None  # add
         for nid in filter(lambda x: x.distance_to_centre == op.distance_to_centre, op.get_neighbours()):
           self.cells[cid].neighbours[nid] = None  # add
-      else:
-        op = cid.get_opposite()
-        self.cells[cid].neighbours[op] = None  # add
-
-    # now sort those having 5. They will end up with 7 neighbours!
-    for cid in filter(lambda x: len(self.cells[x].neighbours) < 6, self.cells):
-      op = cid.get_opposite()
-      for nid in filter(lambda x: x.distance_to_centre == op.distance_to_centre, op.get_neighbours()):
-        self.cells[cid].neighbours[nid] = None  # add
+    else:
+      self.cells = cells
 
   def get_cell_info(self, id):
     """
@@ -259,3 +264,6 @@ class Board:
     elif move.toCell not in self.cells:
       return False, 'Cell does not exist on the board: {}'.format(move.toCell)
     return self.cells[move.toCell].try_transfer_from( self.cells[move.fromCell], move.resources)
+
+  def clone(self):
+    return Board(self.radius, deepcopy(self.cells))

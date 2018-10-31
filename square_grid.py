@@ -89,3 +89,6 @@ class GridCellId():
     :return:
     """
     return GridCellId(self.x + x0, self.y + y0)
+
+  def __repr__(self):
+    return "{}_{}".format(self.x, self.y)

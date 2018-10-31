@@ -143,7 +143,7 @@ class World:
             dic[n.id] = 1
     return dic
 
-  def __init__(self, cells, round_no):
+  def __init__(self, cells):
     """
 
     :type cells: list of CellInfo
@@ -157,7 +157,6 @@ class World:
     self.noneCounts = self.getOfType(None)
     self.neighbourhoodCounts = self.buildNeighbourhood()
     self.neighbourhoodNonOwnCounts = self.buildNonOwnsNeighbourhood()
-    self.round_no = round_no
 
     for cid in self.uberCells:
       self.uberCells[cid].calculateDepth2()
@@ -165,16 +164,29 @@ class World:
 
 class Aliostad(Player):
 
-  def __init__(self, name, randomBoostFactor=None, randomVariation=False, moveHandicap=None):
+  def __init__(self, name,
+               randomBoostFactor=None,
+               randomVariation=False,
+               moveHandicap=None,
+               logging=False):
     Player.__init__(self, name)
     self.round_no = 0
     self.history = []
     self.random_boost = randomBoostFactor
-    self.f = open(name + ".log", mode='w')
+    self.f = None
+    if logging:
+      self.f = open(name + ".log", mode='w')
     self.random_variation = randomVariation
     self.boost_stats = []
     self.move_handicap = moveHandicap
     self.invalid_moves = 0
+
+  def clone(self):
+    return Aliostad(self.name,
+                    self.random_boost,
+                    self.random_variation,
+                    self.move_handicap,
+                    False)
 
   @staticmethod
   def transform_jsoncells_to_infos(cells):
@@ -201,19 +213,20 @@ class Aliostad(Player):
     toCell = srt2[0]
     return Move(fromCell, toCell.id, int(world.uberCells[fromCell].resources * 51 / 100))
 
-  def getBoost(self, world):
+  def getBoost(self, world, cellFromId=None):
     '''
 
     :param self:
     :param world: a wo: World
+    :type cellFromId: CellId
     :return: tran: Transaction
     '''
-    srt = sorted(world.uberCells, key=lambda x: world.uberCells[x].getGivingBoostSuitability(), reverse=True)
-    cellFromId = srt[0]
-    cellFrom = world.uberCells[cellFromId]
+    cell_from_id = sorted(world.uberCells, key=lambda x: world.uberCells[x].getGivingBoostSuitability(),
+                          reverse=True)[0] if cellFromId is None else cellFromId
+    cellFrom = world.uberCells[cell_from_id]
     srt2 = sorted(world.uberCells, key=lambda x:
     -1000 if not world.uberCells[x].canAcceptTransfer or
-             x == cellFromId else world.uberCells[x].boostFactor, reverse=True)
+             x == cell_from_id else world.uberCells[x].boostFactor, reverse=True)
 
     cellToId = srt2[0]
     amount = int(cellFrom.resources * 70 / 100)
@@ -233,7 +246,7 @@ class Aliostad(Player):
 
     return None if len(srt) == 0 or not world.uberCells[srt[0]].canAttack else srt[0]
 
-  def getAttack(self, world):
+  def getAttack(self, world, cellFromId=None):
     '''
 
     :param self:
@@ -241,12 +254,12 @@ class Aliostad(Player):
     :return: tran: Transaction
     '''
 
-    cellFromId = self.getAttackFromCellId(world)
+    cell_from_id = self.getAttackFromCellId(world) if cellFromId is None else cellFromId
 
-    if cellFromId is None:
+    if cell_from_id is None:
       return None
 
-    cellFrom = world.uberCells[cellFromId]
+    cellFrom = world.uberCells[cell_from_id]
     srt2 = sorted(cellFrom.nonOwns, key=lambda x: x.resources *
                                                   (r.uniform(0.1, 5) if self.random_variation else 1.))
     if len(srt2) == 0:
@@ -278,14 +291,13 @@ class Aliostad(Player):
     return False
 
   @staticmethod
-  def build_world(cells, round_no):
+  def build_world(cells):
     """
 
     :type cells: list of CellInfo
-    :type round_no: int
     :return:
     """
-    return World(cells, round_no)
+    return World(cells)
 
   def turn(self, world):
     '''
@@ -359,7 +371,7 @@ class Aliostad(Player):
     :type playerView: PlayerView
     :return: Move
     """
-    return self.movex(Aliostad.build_world(playerView.ownedCells, self.round_no))
+    return self.movex(Aliostad.build_world(playerView.ownedCells))
 
   def movex(self, world):
     """
@@ -371,9 +383,11 @@ class Aliostad(Player):
     self.history.append(h)
     if move is None:
       self.invalid_moves += 1
-      self.f.write('{} - None move from {} strategy\n'.format(self.round_no, h.strategy))
+      if self.f is not None:
+        self.f.write('{} - None move from {} strategy\n'.format(self.round_no, h.strategy))
     else:
-      self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
+      if self.f is not None:
+        self.f.write("{} - {}: From {} to {} with {} - [{}] \n".format(self.round_no,
                                                                    h.strategy,
                                                                    move.fromCell,
                                                                    move.toCell,
