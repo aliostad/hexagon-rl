@@ -23,8 +23,6 @@ class PlayerNames:
   Player1 = "1"
   Player2 = "-1"
 
-_board_cache = {}
-
 def sameSign(a, b):
   return (a < 0 and b < 0) or (a > 0 and b > 0)
 
@@ -69,9 +67,7 @@ def hydrate_board_from_model(a, radius, rect_width):
   :type radius: int
   :return: Board
   """
-  if radius not in _board_cache:
-    _board_cache[radius] = Board(radius)
-  b = _board_cache[radius].clone()
+  b = Board(radius)
   for cellId in b.cells:
     thid = get_thid_from_cellId(cellId, rect_width)
     value = a[thid.y][thid.x]
