@@ -214,11 +214,13 @@ class HexagonGame(AlphaGame):
       result[-1] = 1  # last cell is for NoValidMove
     return result
 
-  def getGameEnded(self, board, player):
+  def getGameEnded(self, board, player, askingForAFriend=True):
     """
 
     :type board: ndarray
     :type player: int
+    :param askingForAFriend: whether it is hypothetical question for a tree search (asking for a friend)
+            or really asking if the game ended in which case 'is NOT asking for a friend'
     :return:
     """
     result = 0
@@ -247,7 +249,7 @@ class HexagonGame(AlphaGame):
     else:
       result = 1
     texts = {0.1: 'drew', 1: 'won', -1: 'lost'}
-    if result != 0:
+    if result != 0 and not askingForAFriend:
       print('Player {} {} !'.format(player, texts[result]))
     return result
 
@@ -343,7 +345,7 @@ class AliostadPlayer:
     :type game: HexagonGame
     """
     self.game = game
-    self.aliostad = Aliostad('aliostad')
+    self.aliostad = Aliostad('aliostad', randomBoostFactor=None)
 
   def play(self, board):
     """
@@ -383,6 +385,9 @@ class CentaurPlayer:
     
     
 if __name__ == '__main__':
+
+  def dummyDisplay(board):
+    pass
 
   args = dotdict({
     'numIters': 20,
@@ -435,5 +440,5 @@ if __name__ == '__main__':
     aliostad = AliostadPlayer(g)
     centaur = CentaurPlayer(g, model, args)
     
-    arena = Arena(aliostad.play, centaur.play, g)
-    print(arena.playGames(20, verbose=False))
+    arena = Arena(aliostad.play, centaur.play, g, display=dummyDisplay)
+    print(arena.playGames(10, verbose=True))
