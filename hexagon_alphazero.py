@@ -87,6 +87,7 @@ class HexagonGame(AlphaGame):
     self.debug = debug
     self.verbose = verbose
     self.all_valid_moves_player = allValidMovesPlayer
+    self.previous_allowed_boost = {}
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
@@ -134,10 +135,10 @@ class HexagonGame(AlphaGame):
   def getInitBoard(self):
 
     self.game_no += 1
-    self.game = Game('1',
-                     [Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player1)), 
-                      Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player2))],
-                     self.radius)
+    players = [Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player1)),
+                      Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player2))]
+    np.random.shuffle(players)
+    self.game = Game('1', players, self.radius)
     self.game.start()
     hexagon_ui_api.games['1'] = self.game
     if self.verbose:
@@ -182,35 +183,39 @@ class HexagonGame(AlphaGame):
     :param player: int
     :return:
     """
-    board = cannonicalBoard
-    hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
+    hex_board = hydrate_board_from_model(cannonicalBoard, self.radius, self.rect_width)
     cells = hex_board.get_cell_infos_for_player(_player_name_mapper.get_hex_name(str(player)))
     world = Aliostad.build_world(cells)
     result = np.zeros(self.getActionSize())
     if self.debug:
       self.validMovesHistory.append(result)
+    include_attack = True
+    include_boost = False
+    include_no_legal_move = False
+    if realPlayer is not None:
+      if realPlayer not in self.previous_allowed_boost:
+        self.previous_allowed_boost[realPlayer] = True
+      if not self.previous_allowed_boost[realPlayer]:
+        include_boost = True
+      self.previous_allowed_boost[realPlayer] = not self.previous_allowed_boost[realPlayer]
+      if realPlayer == self.all_valid_moves_player:
+        include_boost = True
+        include_no_legal_move = True
 
-    if realPlayer is not None and realPlayer == self.all_valid_moves_player:  # send all cells includes both boost and attack
-      for uc in world.uberCells.values():
-        idx = get_index_from_cellId(uc.id, self.rect_width)
-        if uc.canAttackOrExpand or uc.resources > 0:
-          result[idx] = 1
-      result[-1] = 1  # anyway
-    else:
-      # first attack
+    if len(world.uberCells) < 2:
+      include_boost = False
+
+    if include_attack:
       for uc in world.uberCells.values():
         idx = get_index_from_cellId(uc.id, self.rect_width)
         if uc.canAttackOrExpand:
           result[idx] = 1
-      if result.sum() > 0:
-        return result
-      elif len(world.uberCells) > 1:
-        # boost
-        for uc in world.uberCells.values():
-          idx = get_index_from_cellId(uc.id, self.rect_width)
-          if uc.resources > 2:
-            result[idx] = 1
-    if result.sum() == 0:
+    if include_boost:
+      for uc in world.uberCells.values():
+        idx = get_index_from_cellId(uc.id, self.rect_width)
+        if uc.resources > 1:
+          result[idx] = 1
+    if result.sum() == 0 or include_no_legal_move:
       result[-1] = 1  # last cell is for NoValidMove
     return result
 
