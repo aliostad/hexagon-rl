@@ -392,8 +392,8 @@ class CentaurPlayer:
 if __name__ == '__main__':
 
   args = dotdict({
-    'numIters': 10,
-    'numEps': 5,
+    'numIters': 20,
+    'numEps': 10,
     'tempThreshold': 5,
     'updateThreshold': 0.6,
     'maxlenOfQueue': 200000,
@@ -404,7 +404,8 @@ if __name__ == '__main__':
     'checkpoint': './temp/',
     'load_model': False,
     'load_folder_file': ('./temp/', 'temp.pth.tar'),
-    'numItersForTrainExamplesHistory': 20
+    'numItersForTrainExamplesHistory': 20,
+    'radius': 4
   })
 
   train = True
@@ -414,7 +415,7 @@ if __name__ == '__main__':
     train = False
     test = True
 
-  g = HexagonGame(radius=3)
+  g = HexagonGame(radius=args.radius)
   model = HexagonModel(g)
 
   hexagon_ui_api.run_in_background()
