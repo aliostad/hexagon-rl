@@ -11,15 +11,17 @@ class CellId:
     self.nwes = nwes
     self.x = x
     self.distance_to_centre = max(max(abs(nwes), abs(x)), abs(nwes + x))+1
+    self._hash = self.x * 10000 + self.nwes  # this faster
+    self._str = '{}_{}'.format(self.nwes, self.x)
 
   def __str__(self):
-    return '{}_{}'.format(self.nwes, self.x)
+    return self._str
 
   def toJson(self):
     return self.__str__()
 
   def __hash__(self):
-    return self.__str__().__hash__()
+    return self._hash
 
   def get_opposite(self):
     return CellId(-self.nwes, -self.x)
