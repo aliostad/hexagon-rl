@@ -15,7 +15,7 @@ import os
 import sys
 
 
-class PLayerIds:
+class PlayerIds:
   Player1 = 1
   Player2 = -1
 
@@ -74,13 +74,13 @@ def hydrate_board_from_model(a, radius, rect_width):
   b = _board_cache[radius].clone()
   for cellId in b.cells:
     thid = get_thid_from_cellId(cellId, rect_width)
-    value = a[thid.x][thid.y]
+    value = a[thid.y][thid.x]
     b.change_ownership(cellId, get_player_name_from_resource(value), int(abs(value)))
   return b
 
 
 class HexagonGame(AlphaGame):
-  def __init__(self, radius, verbose=True, debug=False):
+  def __init__(self, radius, verbose=True, debug=False, allValidMovesPlayer=None):
     self.radius = radius
     self.rect_width = radius * 2 - (radius % 2)
     self.model_input_shape = (self.rect_width, self.rect_width)
@@ -90,6 +90,7 @@ class HexagonGame(AlphaGame):
     self.validMovesHistory = []  # for debugging
     self.debug = debug
     self.verbose = verbose
+    self.all_valid_moves_player = allValidMovesPlayer
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
@@ -110,7 +111,7 @@ class HexagonGame(AlphaGame):
         sign = int(_player_name_mapper.get_alpha_name(c.owner))
         value = c.resources * sign
         thid = get_thid_from_cellId(c.id, self.rect_width)
-        result[thid.x][thid.y] = value
+        result[thid.y][thid.x] = value
     return result
 
   def get_move_for_action(self, game, action, player):
@@ -170,25 +171,24 @@ class HexagonGame(AlphaGame):
     move = self.get_move_for_action(g, action, thePlayer)
     if move is not None:
       success, msg = g.board.try_transfer(move)
-
       if player < 0:
         g.board.increment_resources()
         g.round_no += 1
         if self.verbose:
-          print '\rround {}'.format(self.game.round_no),
+          print('\rround {}'.format(self.game.round_no)),
       if not success:
         print(msg)
 
     return self._get_board_repr(g.board), -player
 
-  def getValidMoves(self, cannonicalBoard, player):
+  def getValidMoves(self, cannonicalBoard, player, realPlayer=None):
     """
 
     :type cannonicalBoard: ndarray
     :param player: int
     :return:
     """
-    board = cannonicalBoard*player
+    board = cannonicalBoard
     hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
     g = self.game.clone()
     g.board = hex_board
@@ -198,20 +198,27 @@ class HexagonGame(AlphaGame):
     if self.debug:
       self.validMovesHistory.append(result)
 
-    # first attack
-    for uc in world.uberCells.values():     
-      idx = get_index_from_cellId(uc.id, self.rect_width)
-      if uc.canAttackOrExpand:
-        result[idx] = 1
-    if result.sum() > 0:
-      return result
-    elif len(world.uberCells) > 1:
-      # boost
+    if realPlayer is not None and realPlayer == self.all_valid_moves_player:  # send all cells includes both boost and attack
       for uc in world.uberCells.values():
-        idx = get_index_from_cellId(uc.id)
-        if uc.resources > 2:
+        idx = get_index_from_cellId(uc.id, self.rect_width)
+        if uc.canAttackOrExpand or uc.resources > 0:
           result[idx] = 1
+      result[-1] = 1  # anyway
     else:
+      # first attack
+      for uc in world.uberCells.values():
+        idx = get_index_from_cellId(uc.id, self.rect_width)
+        if uc.canAttackOrExpand:
+          result[idx] = 1
+      if result.sum() > 0:
+        return result
+      elif len(world.uberCells) > 1:
+        # boost
+        for uc in world.uberCells.values():
+          idx = get_index_from_cellId(uc.id, self.rect_width)
+          if uc.resources > 2:
+            result[idx] = 1
+    if result.sum() == 0:
       result[-1] = 1  # last cell is for NoValidMove
     return result
 
@@ -355,6 +362,8 @@ class AliostadPlayer:
     cells = hex_board.get_cell_infos_for_player(self.aliostad.name)
     world = Aliostad.build_world(cells)
     move = self.aliostad.movex(world)
+    if move is None:
+      return self.game.rect_width**2  # no valid move
     cid = move.fromCell
     idx = get_index_from_cellId(cid, self.game.rect_width)
     return idx
@@ -426,10 +435,11 @@ if __name__ == '__main__':
   if test:
     _player_name_mapper.register_player_name('aliostad', PlayerNames.Player1)
     _player_name_mapper.register_player_name('centaur', PlayerNames.Player2)
+    g.all_valid_moves_player = PlayerIds.Player1
 
     model.load_checkpoint('temp', 'best.pth.tar')
     aliostad = AliostadPlayer(g)
     centaur = CentaurPlayer(g, model, args)
     
     arena = Arena(aliostad.play, centaur.play, g)
-    print(arena.playGames(2, verbose=False))
+    print(arena.playGames(20, verbose=False))

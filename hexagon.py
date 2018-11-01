@@ -267,3 +267,18 @@ class Board:
 
   def clone(self):
     return Board(self.radius, deepcopy(self.cells))
+
+  def equals(self, anotherBoard):
+    """
+
+    :type anotherBoard: Board
+    :return:
+    """
+    for c in self.cells.values():
+      if c.id not in anotherBoard.cells:
+        return False
+      if c.resources != anotherBoard.cells[c.id].resources:
+        return False
+      if c.owner != anotherBoard.cells[c.id].owner:
+        return False
+    return True
