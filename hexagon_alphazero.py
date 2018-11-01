@@ -174,8 +174,6 @@ class HexagonGame(AlphaGame):
       if player < 0:
         g.board.increment_resources()
         g.round_no += 1
-        if self.verbose:
-          print('\rround {}'.format(self.game.round_no)),
       if not success:
         print(msg)
 
