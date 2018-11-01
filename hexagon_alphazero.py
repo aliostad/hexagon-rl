@@ -243,8 +243,11 @@ class HexagonGame(AlphaGame):
         oppositeSignSum += v
 
     if oppositeSignCount > 0 and sameSignCount > 0:
-      if self.game.round_no > 200:
-        result = 1 if (sameSignCount + (sameSignSum/100)) > (oppositeSignCount + (oppositeSignSum / 100)) else -1
+      if self.game.round_no >= 200:
+        if abs(sameSignCount - oppositeSignCount) == 1:
+          result = 0.1  # draw
+        else:
+          result = 1 if sameSignCount > oppositeSignCount else -1
       else:
         result = 0
     elif oppositeSignCount > 0:
