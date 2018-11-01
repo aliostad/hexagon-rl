@@ -391,7 +391,7 @@ if __name__ == '__main__':
     'updateThreshold': 0.6,
     'maxlenOfQueue': 200000,
     'numMCTSSims': 25,
-    'arenaCompare': 3,
+    'arenaCompare': 7,
     'cpuct': 1,
 
     'checkpoint': './temp/',
