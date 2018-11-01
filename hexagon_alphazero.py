@@ -114,16 +114,16 @@ class HexagonGame(AlphaGame):
         result[thid.y][thid.x] = value
     return result
 
-  def get_move_for_action(self, game, action, player):
+  def get_move_for_action(self, board, action, player):
     """
 
-    :type game: Game
+    :type board: Board
     :type action: int
     :type player: AlphaAliostad
     :return:
     """
     cellId = get_cellId_from_index(action, self.rect_width)
-    cells = game.board.get_cell_infos_for_player(player.name)
+    cells = board.get_cell_infos_for_player(player.name)
     world = Aliostad.build_world(cells)
     if cellId not in world.uberCells:
       print('Not in: {}'.format(cellId))
@@ -162,22 +162,22 @@ class HexagonGame(AlphaGame):
 
     hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
     if executing:
-      g = self.game
+      b = self.game.board
     else:
-      g = self.game.clone()
-      g.board = hex_board
+      b = hex_board
 
     thePlayer = filter(lambda x: x.name == _player_name_mapper.get_hex_name(str(player)), self.game.real_players)[0]
-    move = self.get_move_for_action(g, action, thePlayer)
+    move = self.get_move_for_action(b, action, thePlayer)
     if move is not None:
-      success, msg = g.board.try_transfer(move)
+      success, msg = b.try_transfer(move)
       if player < 0:
-        g.board.increment_resources()
-        g.round_no += 1
+        b.increment_resources()
+        if executing:
+          self.game.round_no += 1
       if not success:
         print(msg)
 
-    return self._get_board_repr(g.board), -player
+    return self._get_board_repr(b), -player
 
   def getValidMoves(self, cannonicalBoard, player, realPlayer=None):
     """
@@ -188,9 +188,7 @@ class HexagonGame(AlphaGame):
     """
     board = cannonicalBoard
     hex_board = hydrate_board_from_model(board, self.radius, self.rect_width)
-    g = self.game.clone()
-    g.board = hex_board
-    cells = g.board.get_cell_infos_for_player(_player_name_mapper.get_hex_name(str(player)))
+    cells = hex_board.get_cell_infos_for_player(_player_name_mapper.get_hex_name(str(player)))
     world = Aliostad.build_world(cells)
     result = np.zeros(self.getActionSize())
     if self.debug:
@@ -252,11 +250,9 @@ class HexagonGame(AlphaGame):
       result = -1
     else:
       result = 1
-
-    if result == -1:
-      print('Player {} lost!'.format(player))
-    elif result == 1:
-      print('Player {} won!'.format(player))
+    texts = {0.1: 'drew', 1: 'won', -1: 'lost'}
+    if result != 0:
+      print('Player {} {} !'.format(player, texts[result]))
     return result
 
   def getCanonicalForm(self, board, player):
@@ -285,7 +281,7 @@ class HexagonGame(AlphaGame):
 
 class HexagonModel(NeuralNet):
 
-  def __init__(self, game, lr=0.003, batch_size=100, epochs=300):
+  def __init__(self, game, lr=0.003, batch_size=100, epochs=100):
     """
 
     :type game: HexagonGame
