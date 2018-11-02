@@ -376,7 +376,7 @@ class CentaurPlayer:
     self.game = game
     self.nnet = nnet
     self.mcts = MCTS(game, nnet, args)
-  
+
   def play(self, board):
     """
     xx
@@ -384,8 +384,31 @@ class CentaurPlayer:
     :return: 
     """
     return np.argmax(self.mcts.getActionProb(board, temp=0))
-    
-    
+
+class RandomPlayer:
+
+  def __init__(self, game, playerId):
+    """,
+
+    :type game: HexagonGame
+    """
+    self.game = game
+    self.id = playerId
+
+  def play(self, board):
+    """
+    xx
+    :type board: ndarray
+    :return:
+    """
+    choices = []
+    valids = self.game.getValidMoves(self.game.getCanonicalForm(board, self.id), self.id, self.id)
+    for idx, v in enumerate(valids):
+      if v == 1:
+        choices.append(idx)
+    return np.random.choice(choices)
+
+
 if __name__ == '__main__':
 
   def dummyDisplay(board):
@@ -435,12 +458,13 @@ if __name__ == '__main__':
   
   if test:
     _player_name_mapper.register_player_name('centaur', PlayerNames.Player1)
-    _player_name_mapper.register_player_name('aliostad', PlayerNames.Player2)
+    _player_name_mapper.register_player_name('random', PlayerNames.Player2)
     g.all_valid_moves_player = PlayerIds.Player2
 
     model.load_checkpoint('temp', 'best.pth.tar')
     aliostad = AliostadPlayer(g, am_i_second_player=True)
     centaur = CentaurPlayer(g, model, args)
+    random = RandomPlayer(g, -1)
     
-    arena = Arena(centaur.play, aliostad.play, g, display=dummyDisplay)
+    arena = Arena(centaur.play, random.play, g, display=dummyDisplay)
     print(arena.playGames(20, verbose=True))
