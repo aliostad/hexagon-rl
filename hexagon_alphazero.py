@@ -205,16 +205,10 @@ class HexagonGame(AlphaGame):
     if len(world.uberCells) < 2:
       include_boost = False
 
-    if include_attack:
-      for uc in world.uberCells.values():
-        idx = get_index_from_cellId(uc.id, self.rect_width)
-        if uc.canAttackOrExpand:
-          result[idx] = 1
-    if include_boost:
-      for uc in world.uberCells.values():
-        idx = get_index_from_cellId(uc.id, self.rect_width)
-        if uc.resources > 1:
-          result[idx] = 1
+    for uc in world.uberCells.values():
+      idx = get_index_from_cellId(uc.id, self.rect_width)
+      if (uc.canAttackOrExpand and include_attack) or (uc.resources > 1 and include_boost):
+        result[idx] = 1
     if result.sum() == 0 or include_no_legal_move:
       result[-1] = 1  # last cell is for NoValidMove
     return result
@@ -344,13 +338,14 @@ class dotdict(dict):
 
 class AliostadPlayer:
 
-  def __init__(self, game):
+  def __init__(self, game, am_i_second_player=False):
     """
 
     :type game: HexagonGame
     """
     self.game = game
     self.aliostad = Aliostad('aliostad', randomBoostFactor=None)
+    self.am_i_second_player = am_i_second_player
 
   def play(self, board):
     """
@@ -358,6 +353,8 @@ class AliostadPlayer:
     :type board: ndarray
     :return:
     """
+    if self.am_i_second_player:
+      board = board * -1
     hex_board = hydrate_board_from_model(board, self.game.game.radius, self.game.rect_width)
     cells = hex_board.get_cell_infos_for_player(self.aliostad.name)
     world = Aliostad.build_world(cells)
@@ -382,7 +379,7 @@ class CentaurPlayer:
   
   def play(self, board):
     """
-    
+    xx
     :type board: ndarray
     :return: 
     """
@@ -437,13 +434,13 @@ if __name__ == '__main__':
     c.learn()
   
   if test:
-    _player_name_mapper.register_player_name('aliostad', PlayerNames.Player1)
-    _player_name_mapper.register_player_name('centaur', PlayerNames.Player2)
-    g.all_valid_moves_player = PlayerIds.Player1
+    _player_name_mapper.register_player_name('centaur', PlayerNames.Player1)
+    _player_name_mapper.register_player_name('aliostad', PlayerNames.Player2)
+    g.all_valid_moves_player = PlayerIds.Player2
 
     model.load_checkpoint('temp', 'best.pth.tar')
-    aliostad = AliostadPlayer(g)
+    aliostad = AliostadPlayer(g, am_i_second_player=True)
     centaur = CentaurPlayer(g, model, args)
     
-    arena = Arena(aliostad.play, centaur.play, g, display=dummyDisplay)
-    print(arena.playGames(10, verbose=True))
+    arena = Arena(centaur.play, aliostad.play, g, display=dummyDisplay)
+    print(arena.playGames(20, verbose=True))

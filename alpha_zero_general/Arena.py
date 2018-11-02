@@ -23,7 +23,7 @@ class Arena():
         self.game = game
         self.display = display
 
-    def playGame(self, verbose=False):
+    def playGame(self, player_to_start=1, verbose=False):
         """
         Executes one episode of a game.
 
@@ -34,7 +34,7 @@ class Arena():
                 draw result returned from the game that is neither 1, -1, nor 0.
         """
         players = [self.player2, None, self.player1]
-        curPlayer = 1
+        curPlayer = player_to_start
         board = self.game.getInitBoard()
         it = 0
         while self.game.getGameEnded(board, curPlayer, askingForAFriend=False)==0:
@@ -93,10 +93,8 @@ class Arena():
                                                                                                        total=bar.elapsed_td, eta=bar.eta_td)
             bar.next()
 
-        self.player1, self.player2 = self.player2, self.player1
-        
         for _ in range(num):
-            gameResult = self.playGame(verbose=verbose)
+            gameResult = self.playGame(player_to_start=-1, verbose=verbose)
             if gameResult==-1:
                 oneWon+=1                
             elif gameResult==1:
