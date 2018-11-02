@@ -332,7 +332,30 @@ class HexagonModel(NeuralNet):
       raise("No model in path '{}'".format(filepath))
     self.model.load_weights(filepath)
 
-class dotdict(dict):
+
+class HexagonAlternativeModel(HexagonModel):
+  def __init__(self, game, lr=0.003, batch_size=100, epochs=100):
+    """
+
+    :type game: HexagonGame
+    """
+    input_shape = (game.rect_width, game.rect_width)
+    input = Input(shape=input_shape, name='board_input')
+    med = Reshape(input_shape + (1, ))(input)
+    med = Conv2D(128, (5, 5), padding='same', activation='relu', name='5x5-128')(med)
+    med = Conv2D(64, (3, 3), padding='same', activation='relu', name='3x3-64')(med)
+    med = Flatten()(med)
+    med = Dense(64, activation='relu', name='dense64_relu')(med)
+    pipe = Dense(64, activation='tanh', name='dense64_tanh')(med)
+    pi = Dense(game.getActionSize(), activation='softmax', name='out_pi')(pipe)
+    v = Dense(1, activation='tanh', name='out_v')(pipe)
+    self.model = Model(inputs=[input], outputs=[pi, v])
+    self.model.compile(loss=['categorical_crossentropy', 'mean_squared_error'], optimizer=Adam(lr))
+    self.batch_size = batch_size
+    self.epochs = epochs
+
+
+class DotDict(dict):
   def __getattr__(self, name):
     return self[name]
 
@@ -414,7 +437,7 @@ if __name__ == '__main__':
   def dummyDisplay(board):
     pass
 
-  args = dotdict({
+  args = DotDict({
     'numIters': 20,
     'numEps': 10,
     'tempThreshold': 5,
@@ -439,7 +462,7 @@ if __name__ == '__main__':
     test = True
 
   g = HexagonGame(radius=args.radius)
-  model = HexagonModel(g)
+  model = HexagonAlternativeModel(g)
 
   hexagon_ui_api.run_in_background()
 
