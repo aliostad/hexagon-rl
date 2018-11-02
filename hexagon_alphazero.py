@@ -354,6 +354,25 @@ class HexagonAlternativeModel(HexagonModel):
     self.batch_size = batch_size
     self.epochs = epochs
 
+class HexagonFlatModel(HexagonModel):
+  def __init__(self, game, lr=0.003, batch_size=100, epochs=100):
+    """
+
+    :type game: HexagonGame
+    """
+    input_shape = (game.rect_width, game.rect_width)
+    input = Input(shape=input_shape, name='board_input')
+    med = Flatten()(input)
+    med = Dense(128, activation='relu', name='dense64_relu')(med)
+    med = Dense(64, activation='tanh', name='dense64_tanh')(med)
+    pipe = Dense(64, activation='relu', name='dense64_relu2')(med)
+    pi = Dense(game.getActionSize(), activation='softmax', name='out_pi')(pipe)
+    v = Dense(1, activation='tanh', name='out_v')(pipe)
+    self.model = Model(inputs=[input], outputs=[pi, v])
+    self.model.compile(loss=['categorical_crossentropy', 'mean_squared_error'], optimizer=Adam(lr))
+    self.batch_size = batch_size
+    self.epochs = epochs
+
 
 class DotDict(dict):
   def __getattr__(self, name):
@@ -462,7 +481,7 @@ if __name__ == '__main__':
     test = True
 
   g = HexagonGame(radius=args.radius)
-  model = HexagonAlternativeModel(g)
+  model = HexagonFlatModel(g)
 
   hexagon_ui_api.run_in_background()
 
@@ -481,7 +500,7 @@ if __name__ == '__main__':
   
   if test:
     _player_name_mapper.register_player_name('centaur', PlayerNames.Player1)
-    _player_name_mapper.register_player_name('random', PlayerNames.Player2)
+    _player_name_mapper.register_player_name('aliostad', PlayerNames.Player2)
     g.all_valid_moves_player = PlayerIds.Player2
 
     model.load_checkpoint('temp', 'best.pth.tar')
@@ -489,5 +508,5 @@ if __name__ == '__main__':
     centaur = CentaurPlayer(g, model, args)
     random = RandomPlayer(g, -1)
     
-    arena = Arena(centaur.play, random.play, g, display=dummyDisplay)
+    arena = Arena(centaur.play, aliostad.play, g, display=dummyDisplay)
     print(arena.playGames(20, verbose=True))

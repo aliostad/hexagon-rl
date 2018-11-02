@@ -66,7 +66,6 @@ class UberCell:
     self.nonOwns = filter(lambda x: x.isOwned is None or x.isOwned == False, self.neighbours)
 
     # how suitable is a cell for receiving boost
-    #
     self.boostFactor = math.sqrt(sum((n.resources for n in self.enemies), 1)) * \
                        safeMax([n.resources for n in self.enemies], 1) / (self.resources + 1)
     self.powerFactor = self.resources / (safeMin([n.resources for n in self.nonOwns]) + 1)
