@@ -502,8 +502,8 @@ if __name__ == '__main__':
     _player_name_mapper.register_player_name('alpha1', PlayerNames.Player1)
     _player_name_mapper.register_player_name('alpha2', PlayerNames.Player2)
 
-    c = Coach(g, model, args)
-  
+    c = Coach(g, flat_model, args)
+
     if args.load_model:
       print("Load trainExamples from file")
       c.loadTrainExamples()
