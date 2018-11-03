@@ -481,7 +481,19 @@ if __name__ == '__main__':
     test = True
 
   g = HexagonGame(radius=args.radius)
-  model = HexagonFlatModel(g)
+
+  # conv model
+  conv_model = HexagonModel(g)
+  conv_model.load_checkpoint('models', 'conv.tar')
+
+  # conv model
+  conv_model = HexagonAlternativeModel(g)
+  conv_model.load_checkpoint('models', 'conv_alt.tar')
+
+  # flat model
+  flat_model = HexagonFlatModel(g)
+  flat_model.load_checkpoint('models', 'flat.tar')
+
 
   hexagon_ui_api.run_in_background()
 
@@ -499,14 +511,14 @@ if __name__ == '__main__':
     c.learn()
   
   if test:
-    _player_name_mapper.register_player_name('centaur', PlayerNames.Player1)
-    _player_name_mapper.register_player_name('aliostad', PlayerNames.Player2)
-    g.all_valid_moves_player = PlayerIds.Player2
+    _player_name_mapper.register_player_name('centaur_flat', PlayerNames.Player1)
+    _player_name_mapper.register_player_name('centaur_conv', PlayerNames.Player2)
+    # g.all_valid_moves_player = PlayerIds.Player2
 
-    model.load_checkpoint('temp', 'best.pth.tar')
     aliostad = AliostadPlayer(g, am_i_second_player=True)
-    centaur = CentaurPlayer(g, model, args)
+    flat_centaur = CentaurPlayer(g, flat_model, args)
+    conv_centaur = CentaurPlayer(g, conv_model, args)
     random = RandomPlayer(g, -1)
     
-    arena = Arena(centaur.play, aliostad.play, g, display=dummyDisplay)
+    arena = Arena(flat_centaur.play, conv_centaur.play, g, display=dummyDisplay)
     print(arena.playGames(20, verbose=True))
