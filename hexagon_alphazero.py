@@ -13,7 +13,7 @@ from keras.optimizers import Adam
 import hexagon_ui_api
 import os
 import sys
-
+import argparse
 
 class PlayerIds:
   Player1 = 1
@@ -329,8 +329,9 @@ class HexagonModel(NeuralNet):
   def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
     filepath = os.path.join(folder, filename)
     if not os.path.exists(filepath):
-      raise("No model in path '{}'".format(filepath))
-    self.model.load_weights(filepath)
+      print ("No model in path '{}'".format(filepath))
+    else:
+      self.model.load_weights(filepath)
 
 
 class HexagonAlternativeModel(HexagonModel):
@@ -450,6 +451,13 @@ class RandomPlayer:
         choices.append(idx)
     return np.random.choice(choices)
 
+def menu():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('what', help="what to do")
+  parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='fm')
+  parser.add_argument('--p2', '-q', help="player2: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='a')
+  return parser.parse_known_args(sys.argv[1:])
+
 
 if __name__ == '__main__':
 
@@ -473,6 +481,10 @@ if __name__ == '__main__':
     'radius': 4
   })
 
+  known, unknown = menu()
+  args.update(known.__dict__)
+  args.update(unknown)
+
   train = True
   test = False
   
@@ -482,22 +494,22 @@ if __name__ == '__main__':
 
   g = HexagonGame(radius=args.radius)
 
-  # conv model
-  conv_model = HexagonModel(g)
-  conv_model.load_checkpoint('models', 'conv.tar')
 
   # conv model
-  conv_model = HexagonAlternativeModel(g)
-  conv_model.load_checkpoint('models', 'conv_alt.tar')
+  conv_model = HexagonModel(g)
+  conv_model.load_checkpoint('models', 'conv_{}.tar'.format(args.radius))
+
+  # conv alt model
+  conv_alt_model = HexagonAlternativeModel(g)
+  conv_alt_model.load_checkpoint('models', 'conv_alt_{}.tar'.format(args.radius))
 
   # flat model
   flat_model = HexagonFlatModel(g)
-  flat_model.load_checkpoint('models', 'flat.tar')
-
+  flat_model.load_checkpoint('models', 'flat_{}.tar'.format(args.radius))
 
   hexagon_ui_api.run_in_background()
 
-  if train:
+  if args.what == 'train':
     
     _player_name_mapper.register_player_name('alpha1', PlayerNames.Player1)
     _player_name_mapper.register_player_name('alpha2', PlayerNames.Player2)
@@ -510,15 +522,33 @@ if __name__ == '__main__':
   
     c.learn()
   
-  if test:
-    _player_name_mapper.register_player_name('centaur_flat', PlayerNames.Player1)
-    _player_name_mapper.register_player_name('centaur_conv', PlayerNames.Player2)
-    # g.all_valid_moves_player = PlayerIds.Player2
+  if args.what == 'test':
 
-    aliostad = AliostadPlayer(g, am_i_second_player=True)
     flat_centaur = CentaurPlayer(g, flat_model, args)
     conv_centaur = CentaurPlayer(g, conv_model, args)
-    random = RandomPlayer(g, -1)
-    
-    arena = Arena(flat_centaur.play, conv_centaur.play, g, display=dummyDisplay)
+    conv_alt_centaur = CentaurPlayer(g, conv_alt_model, args)
+    random_player = RandomPlayer(g, -1)
+
+    def get_player(v, id):
+      if v == 'a':
+        aliostad = AliostadPlayer(g, am_i_second_player=id<0)
+        g.all_valid_moves_player = id
+        return aliostad, 'aliostad'
+      elif v == 'fm':
+        return flat_centaur, 'flat_centaur'
+      elif v == 'cm':
+        return conv_centaur, 'conv_centaur'
+      elif v == 'cam':
+        return conv_alt_centaur, 'conv_alt_centaur'
+      elif v == 'r':
+        g.all_valid_moves_player = id
+        return random_player, 'random_player'
+
+    player1, player1_name = get_player(args.p1, 1)
+    player2, player2_name = get_player(args.p2, -1)
+
+    _player_name_mapper.register_player_name(player1_name, PlayerNames.Player1)
+    _player_name_mapper.register_player_name(player2_name, PlayerNames.Player2)
+
+    arena = Arena(player1.play, player2.play, g, display=dummyDisplay)
     print(arena.playGames(20, verbose=True))
