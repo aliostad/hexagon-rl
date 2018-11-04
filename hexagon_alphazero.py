@@ -457,6 +457,7 @@ def menu():
   parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='fm')
   parser.add_argument('--p2', '-q', help="player2: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='a')
   parser.add_argument('--radius', '-r', help="radius of hexagon", type=int, default=4)
+  parser.add_argument('--training_model', '-t', help="training model: c for conv, ca for conv alternate and f for flat", default='c')
 
   return parser.parse_known_args(sys.argv[1:])
 
@@ -509,12 +510,18 @@ if __name__ == '__main__':
 
   hexagon_ui_api.run_in_background()
 
+  training_models = {
+    'c': conv_model,
+    'ca': conv_alt_model,
+    'f': flat_model
+  }
+
   if args.what == 'train':
     
     _player_name_mapper.register_player_name('alpha1', PlayerNames.Player1)
     _player_name_mapper.register_player_name('alpha2', PlayerNames.Player2)
 
-    c = Coach(g, flat_model, args)
+    c = Coach(g, training_models[args.training_model], args)
 
     if args.load_model:
       print("Load trainExamples from file")
@@ -543,6 +550,8 @@ if __name__ == '__main__':
       elif v == 'r':
         g.all_valid_moves_player = id
         return random_player, 'random_player'
+      else:
+        raise Exception("Invalid player: " + v)
 
     player1, player1_name = get_player(args.p1, 1)
     player2, player2_name = get_player(args.p2, -1)
