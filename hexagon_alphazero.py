@@ -454,7 +454,7 @@ class RandomPlayer:
 def menu():
   parser = argparse.ArgumentParser()
   parser.add_argument('what', help="what to do")
-  parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='fm')
+  parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='cm')
   parser.add_argument('--p2', '-q', help="player2: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='a')
   parser.add_argument('--radius', '-r', help="radius of hexagon", type=int, default=4)
   parser.add_argument('--training_model', '-t', help="training model: c for conv, ca for conv alternate and f for flat", default='c')
@@ -476,7 +476,6 @@ if __name__ == '__main__':
     'numMCTSSims': 25,
     'arenaCompare': 10,
     'cpuct': 1,
-
     'checkpoint': './temp/',
     'load_model': False,
     'load_folder_file': ('./temp/', 'temp.pth.tar'),
