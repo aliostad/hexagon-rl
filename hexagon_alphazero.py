@@ -456,6 +456,8 @@ def menu():
   parser.add_argument('what', help="what to do")
   parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='fm')
   parser.add_argument('--p2', '-q', help="player2: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='a')
+  parser.add_argument('--radius', '-r', help="radius of hexagon", type=int, default=4)
+
   return parser.parse_known_args(sys.argv[1:])
 
 
@@ -477,13 +479,11 @@ if __name__ == '__main__':
     'checkpoint': './temp/',
     'load_model': False,
     'load_folder_file': ('./temp/', 'temp.pth.tar'),
-    'numItersForTrainExamplesHistory': 20,
-    'radius': 4
+    'numItersForTrainExamplesHistory': 20
   })
 
   known, unknown = menu()
   args.update(known.__dict__)
-  args.update(unknown)
 
   train = True
   test = False
