@@ -3,17 +3,49 @@ from episodic_memory import *
 from keras import backend as K
 import os
 
-EPSILON = 1e-10
+def exponential_average(old, new, b1):
+  return old * b1 + (1-b1) * new
+
+def proximal_policy_optimization_loss_continuous(advantage, old_prediction,
+                                                 noise=1., loss_clipping=0.2, epsilon=1e-10):
+  def loss(y_true, y_pred):
+    var = K.square(noise)
+    pi = 3.1415926
+    denom = K.sqrt(2 * pi * var)
+    prob_num = K.exp(- K.square(y_true - y_pred) / (2 * var))
+    old_prob_num = K.exp(- K.square(y_true - old_prediction) / (2 * var))
+
+    prob = prob_num/denom
+    old_prob = old_prob_num/denom
+    r = prob/(old_prob + epsilon)
+    return -K.mean(K.minimum(r * advantage, K.clip(r, min_value=1 - loss_clipping,
+                                                   max_value=1 + loss_clipping) * advantage))
+  return loss
+
+def proximal_policy_optimization_loss(advantage, old_prediction,
+                                      entropy_loss=5*1e-3, loss_clipping=0.2, epsilon=1e-10):
+
+  def loss(y_true, y_pred):
+    prob = K.sum(y_true * y_pred)
+    old_prob = K.sum(y_true * old_prediction)
+    r = prob / (old_prob + epsilon)
+    entr_loss = (prob * -K.log(K.abs(prob) + epsilon) * entropy_loss)
+    clip = K.mean(
+      K.minimum(r * advantage, K.clip(r,
+                                      min_value=1.-loss_clipping,
+                                      max_value=1.+loss_clipping) * advantage))
+    rt = entr_loss + clip
+    return rt
+
+  return loss
 
 class PPOAgent(Agent):
-
-  loss_clipping = 0.2
-  ENTROPY_LOSS = 5 * 1e-3
 
   def __init__(self, nb_actions, actor, critic, memory, observation_shape,
                gamma=.99, batch_size=32, nb_steps_warmup=100,
                train_interval=None, memory_interval=1, target_model_update=.001,
                masker=None, training_epochs=10, train_on_last_episode=False,
+               noise=1., exploration_ratio=0.99, continuous=False,
                verbose=True, **kwargs):
     super(PPOAgent, self).__init__(**kwargs)
 
@@ -29,6 +61,9 @@ class PPOAgent(Agent):
     self.training_epochs = training_epochs
     self.train_on_last_episode = train_on_last_episode
     self.verbose = verbose
+    self.noise = noise
+    self.exploration_ratio = exploration_ratio
+    self.continuous = continuous
 
     # Related objects.
     self.actor = actor
@@ -81,6 +116,14 @@ class PPOAgent(Agent):
     one_hot_action[the_choice] = 1.
     return masked_raw_action, raw_action, one_hot_action
 
+  def select_action_continuous(self, state):
+    p = self.actor.predict([state.reshape((1,) + state.shape), self.dummy_value, self.dummy_action])
+    if self.training and np.random.uniform() < self.exploration_ratio:
+      action = action_matrix = p[0] + np.random.normal(loc=0, scale=self.noise, size=p[0].shape)
+    else:
+      action = action_matrix = p[0]
+    return action, action_matrix, p
+
   def forward(self, observation):
     self.last_observation = observation
     masked_raw_action, raw_action, one_hot_action = self.select_action(observation)
@@ -129,20 +172,3 @@ class PPOAgent(Agent):
       self.actor.train_on_batch([observations, advantages, pred_actions], [actions])
     for e in range(self.training_epochs):
       self.critic.train_on_batch([observations], [rewards])
-
-  @staticmethod
-  def proximal_policy_optimization_loss(advantage, old_prediction):
-
-    def loss(y_true, y_pred):
-      prob = K.sum(y_true * y_pred)
-      old_prob = K.sum(y_true * old_prediction)
-      r = prob / (old_prob + EPSILON)
-      entr_loss = (prob * -K.log(K.abs(prob) + EPSILON) * PPOAgent.ENTROPY_LOSS)
-      clip = K.mean(
-        K.minimum(r * advantage, K.clip(r,
-                                        min_value=1.-PPOAgent.loss_clipping,
-                                        max_value=1.+PPOAgent.loss_clipping) * advantage))
-      rt = entr_loss + clip
-      return rt
-
-    return loss
