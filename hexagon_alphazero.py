@@ -259,7 +259,7 @@ class HexagonGame(AlphaGame):
           self.intelligent_resource_actors[player].step += 1
         amount = int(self.intelligent_resource_actors[player].forward(self.extract_resource_feature(move, world)))
         candidateMove = Move(move.fromCell, move.toCell, amount)
-        if player == PlayerNames.Player1 and np.random.uniform() < 0.3:
+        if player == PlayerIds.Player1 and np.random.uniform() < 0.3:
           move = candidateMove
         elif self._is_resource_amount_valid(candidateMove, world):
           reward = 0.5
@@ -683,8 +683,10 @@ if __name__ == '__main__':
       g.intelligent_resource_actors[PlayerIds.Player2].training = True
 
       def checkpoint():
-        rm1.model.save_weights('ppo_1', overwrite=True)
-        rm1.model.save_weights('ppo_-1', overwrite=True)
+        rm1.model.save_weights('ppo_1_actor.h5f', overwrite=True)
+        rm1.critic.save_weights('ppo_1_critic.h5f', overwrite=True)
+        rm2.model.save_weights('ppo_-1_actor.h5f', overwrite=True)
+        rm2.critic.save_weights('ppo_-1_critic.h5f', overwrite=True)
 
       c.checkpointing_event = checkpoint
 
