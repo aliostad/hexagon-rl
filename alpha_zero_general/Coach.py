@@ -21,6 +21,7 @@ class Coach():
         self.mcts = MCTS(self.game, self.nnet, self.args)
         self.trainExamplesHistory = []    # history of examples from args.numItersForTrainExamplesHistory latest iterations
         self.skipFirstSelfPlay = False # can be overriden in loadTrainExamples()
+        self.checkpointing_event = None
 
     def executeEpisode(self):
         """
@@ -112,6 +113,8 @@ class Coach():
             # training new network, keeping a copy of the old one
             self.nnet.save_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
             self.pnet.load_checkpoint(folder=self.args.checkpoint, filename='temp.pth.tar')
+            if self.checkpointing_event:
+                self.checkpointing_event()
             pmcts = MCTS(self.game, self.pnet, self.args)
             
             self.nnet.train(trainExamples)

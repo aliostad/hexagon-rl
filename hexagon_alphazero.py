@@ -77,7 +77,8 @@ def hydrate_board_from_model(a, radius, rect_width):
 
 
 class HexagonGame(AlphaGame):
-  def __init__(self, radius, verbose=True, debug=False, allValidMovesPlayer=None, intelligent_resource_actors=None, max_rounds=20):
+  def __init__(self, radius, verbose=True, debug=False, allValidMovesPlayer=None,
+               intelligent_resource_actors=None, max_rounds=None):
     """
 
     :type radius: int
@@ -98,7 +99,7 @@ class HexagonGame(AlphaGame):
     self.all_valid_moves_player = allValidMovesPlayer
     self.previous_allowed_boost = {}
     self.intelligent_resource_actors = intelligent_resource_actors
-    self.max_rounds = max_rounds
+    self.max_rounds = (radius**2 * 9) if max_rounds is None else max_rounds
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
@@ -258,7 +259,9 @@ class HexagonGame(AlphaGame):
           self.intelligent_resource_actors[player].step += 1
         amount = int(self.intelligent_resource_actors[player].forward(self.extract_resource_feature(move, world)))
         candidateMove = Move(move.fromCell, move.toCell, amount)
-        if self._is_resource_amount_valid(candidateMove, world):
+        if player == PlayerNames.Player1 and np.random.uniform() < 0.3:
+          move = candidateMove
+        elif self._is_resource_amount_valid(candidateMove, world):
           reward = 0.5
           move = candidateMove
         else:
@@ -678,6 +681,12 @@ if __name__ == '__main__':
                                                                   nb_steps_warmup=30)
       g.intelligent_resource_actors[PlayerIds.Player1].training = True
       g.intelligent_resource_actors[PlayerIds.Player2].training = True
+
+      def checkpoint():
+        rm1.model.save_weights('ppo_1', overwrite=True)
+        rm1.model.save_weights('ppo_-1', overwrite=True)
+
+      c.checkpointing_event = checkpoint
 
     c.learn()
   
