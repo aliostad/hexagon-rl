@@ -151,7 +151,7 @@ class HexagonGame(AlphaGame):
     players = [Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player1)),
                       Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player2))]
     np.random.shuffle(players)
-    self.game = Game('1', players, self.radius)
+    self.game = Game('1', players, self.radius, verbose=self.verbose)
     self.game.start()
     hexagon_ui_api.games['1'] = self.game
     if self.verbose:
@@ -633,9 +633,9 @@ if __name__ == '__main__':
     test = True
 
   if args.intelligent_resource:
-    g = HexagonGame(radius=args.radius, intelligent_resource_actors={})
+    g = HexagonGame(radius=args.radius, intelligent_resource_actors={}, verbose=False)
   else:
-    g = HexagonGame(radius=args.radius)
+    g = HexagonGame(radius=args.radius, verbose=False)
 
   # conv model
   conv_model = HexagonModel(g)
