@@ -262,10 +262,10 @@ class HexagonGame(AlphaGame):
         if player == PlayerIds.Player1 and np.random.uniform() < 0.3:
           move = candidateMove
         elif self._is_resource_amount_valid(candidateMove, world):
-          reward = 0.5
+          reward = 0
           move = candidateMove
         else:
-          reward = -5
+          reward = candidateMove.resources - move.resources
       success, msg = b.try_transfer(move)
       if player < 0:
         b.increment_resources()
