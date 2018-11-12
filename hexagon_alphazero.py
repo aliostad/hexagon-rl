@@ -3,12 +3,13 @@ from alpha_zero_general.NeuralNet import NeuralNet
 from alpha_zero_general.Coach import Coach
 from alpha_zero_general.Arena import Arena
 from alpha_zero_general.MCTS import MCTS
-from hexagon_agent import Aliostad, UberCell
+from hexagon_agent import Aliostad, UberCell, World
 from hexagon_gaming import Game, Board, Cell, Player, Move, CellId
+from ppo import *
 import numpy as np
 from square_grid import *
-from keras import Model
-from keras.layers import Conv2D, Dense, Input, Reshape, Flatten
+from keras import Model, Sequential
+from keras.layers import Conv2D, Dense, Input, Reshape, Flatten, concatenate
 from keras.optimizers import Adam
 import hexagon_ui_api
 import os
@@ -76,7 +77,15 @@ def hydrate_board_from_model(a, radius, rect_width):
 
 
 class HexagonGame(AlphaGame):
-  def __init__(self, radius, verbose=True, debug=False, allValidMovesPlayer=None):
+  def __init__(self, radius, verbose=True, debug=False, allValidMovesPlayer=None, intelligent_resource_actors=None, max_rounds=20):
+    """
+
+    :type radius: int
+    :type verbose: bool
+    :type debug: bool
+    :type allValidMovesPlayer: bool
+    :type intelligent_resource_actors: dict of int: PPOAgent
+    """
     self.radius = radius
     self.rect_width = radius * 2 - (radius % 2)
     self.model_input_shape = (self.rect_width, self.rect_width)
@@ -88,6 +97,8 @@ class HexagonGame(AlphaGame):
     self.verbose = verbose
     self.all_valid_moves_player = allValidMovesPlayer
     self.previous_allowed_boost = {}
+    self.intelligent_resource_actors = intelligent_resource_actors
+    self.max_rounds = max_rounds
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
@@ -117,20 +128,21 @@ class HexagonGame(AlphaGame):
     :type board: Board
     :type action: int
     :type player: AlphaAliostad
-    :return:
+    :return: Move, World
     """
     cellId = get_cellId_from_index(action, self.rect_width)
     cells = board.get_cell_infos_for_player(player.name)
     world = Aliostad.build_world(cells)
+
     if cellId not in world.uberCells:
       print('Not in: {}'.format(cellId))
       return None
     cellFrom = world.uberCells[cellId]
     if cellFrom.canAttackOrExpand:
-      return player.getAttack(world, cellId)
+      move = player.getAttack(world, cellId)
     else:
-      return player.getBoost(world, cellId)
-
+      move = player.getBoost(world, cellId)
+    return move, world
 
   def getInitBoard(self):
 
@@ -145,6 +157,79 @@ class HexagonGame(AlphaGame):
       print("New game: {}".format(self.game_no))
     return self._get_board_repr(self.game.board)
 
+  def _is_resource_amount_valid(self, move, world):
+    """
+
+    :type move: Move
+    :type world: World
+    :return:
+    """
+    if move.resources <= 0:
+      return False
+    fromCell = world.uberCells[move.fromCell]
+    if fromCell.resources <= move.resources:
+      return False
+    toResources = world.worldmap[move.toCell]
+    if move.toCell not in world.uberCells:
+      # attack
+      if abs(toResources) >= move.resources:
+        return False
+    return True
+
+  def extract_resource_feature(self, move, world):
+    """
+    Generates a feature vector for resource. Indices:
+      0  - resource of the from cell
+      1  - sum of friendly resources
+      2  - min of the friendly resources
+      3  - max of the friendly resources
+      4  - sum of enemy resources
+      5  - min of the enemy resources
+      6  - max of the enemy resources
+      7  - resource of the to cell
+      8  - sum of friendly resources
+      9  - min of the friendly resources
+      10 - max of the friendly resources
+      11 - sum of enemy resources
+      12 - min of the enemy resources
+      13 - max of the enemy resources
+    :type move: Move
+    :type world: World
+    :return:
+    """
+    def safe_sum(iterable):
+      if any(iterable):
+        return sum(iterable)
+      else:
+        return 0
+    def safe_min(iterable):
+      if any(iterable):
+        return np.min(np.array(iterable))
+      else:
+        return 0
+    def safe_max(iterable):
+      if any(iterable):
+        return np.max(np.array(iterable))
+      else:
+        return 0
+
+    fromCell = world.uberCells[move.fromCell]
+    if fromCell.resources <= move.resources:
+      return False
+    toResources = world.worldmap[move.toCell]
+    vector = [0 for _ in range(0, 14)]
+    vector[0] = fromCell.resources * 1.
+    is_attack = False if move.toCell in world.uberCells else True
+    sign = -1. if is_attack else 1.
+    vector[1] = safe_sum(map(lambda x: x.resources, fromCell.owns)) * 1.
+    vector[2] = safe_min(map(lambda x: x.resources, fromCell.owns)) * 1.
+    vector[3] = safe_max(map(lambda x: x.resources, fromCell.owns)) * 1.
+    vector[5] = -safe_sum(map(lambda x: x.resources, fromCell.enemies)) * 1.
+    vector[5] = -safe_min(map(lambda x: x.resources, fromCell.enemies)) * 1.
+    vector[6] = -safe_max(map(lambda x: x.resources, fromCell.enemies)) * 1.
+    vector[7] = sign * toResources
+    return np.array(vector)
+
   def getNextState(self, board, player, action, executing=False):
     """
 
@@ -153,6 +238,7 @@ class HexagonGame(AlphaGame):
     :param action: int
     :return: (ndarray, int)
     """
+    reward = None
     #  if has no legal move then board does not change
     if action == self.NO_LEGAL_MOVE:
       return board, -player
@@ -164,8 +250,19 @@ class HexagonGame(AlphaGame):
       b = hex_board
 
     thePlayer = filter(lambda x: x.name == _player_name_mapper.get_hex_name(str(player)), self.game.real_players)[0]
-    move = self.get_move_for_action(b, action, thePlayer)
+    move, world = self.get_move_for_action(b, action, thePlayer)
+
     if move is not None:
+      if self.intelligent_resource_actors:
+        if executing:
+          self.intelligent_resource_actors[player].step += 1
+        amount = int(self.intelligent_resource_actors[player].forward(self.extract_resource_feature(move, world)))
+        candidateMove = Move(move.fromCell, move.toCell, amount)
+        if self._is_resource_amount_valid(candidateMove, world):
+          reward = 0.5
+          move = candidateMove
+        else:
+          reward = -5
       success, msg = b.try_transfer(move)
       if player < 0:
         b.increment_resources()
@@ -174,7 +271,18 @@ class HexagonGame(AlphaGame):
       if not success:
         print(msg)
 
-    return self._get_board_repr(b), -player
+    newBoard = self._get_board_repr(b)
+    if reward is not None:
+      result = self.getGameEnded(newBoard, player, not executing)
+      if result == 0:
+        self.intelligent_resource_actors[player].backward(reward, False)
+      elif executing and result == 1:
+        self.intelligent_resource_actors[player].backward(reward + 1000, True)
+      elif executing and result == -1:
+        self.intelligent_resource_actors[player].backward(reward - 1000, True)
+      elif executing and result == 0.1:
+        self.intelligent_resource_actors[player].backward(reward + 100, True)
+    return newBoard, -player
 
   def getValidMoves(self, cannonicalBoard, player, realPlayer=None):
     """
@@ -236,7 +344,7 @@ class HexagonGame(AlphaGame):
         oppositeSignSum += v
 
     if oppositeSignCount > 0 and sameSignCount > 0:
-      if self.game.round_no >= 200:
+      if self.game.round_no >= self.max_rounds:
         if abs(sameSignCount - oppositeSignCount) == 1:
           result = 0.1  # draw
         else:
@@ -355,6 +463,7 @@ class HexagonAlternativeModel(HexagonModel):
     self.batch_size = batch_size
     self.epochs = epochs
 
+
 class HexagonFlatModel(HexagonModel):
   def __init__(self, game, lr=0.003, batch_size=100, epochs=100):
     """
@@ -374,6 +483,33 @@ class HexagonFlatModel(HexagonModel):
     self.batch_size = batch_size
     self.epochs = epochs
 
+class ResourceModel:
+  def __init__(self, modelName='Attack_model_params.h5f', lr=0.001):
+    self.modelName = modelName if modelName is not None else 'Attack_model_params.h5f' + str(r.uniform(0, 10000000))
+    state_input_shape = (14, )
+    action_shape = (1,)
+
+    state_input = Input(shape=state_input_shape, name='state_input')
+    advantage = Input(shape=(1,), name='advantage')
+    old_prediction = Input(action_shape, name='old_prediction')
+    samba = Dense(256, activation='relu', name='actor_dense_0')(state_input)
+    samba = Dense(64, activation='relu', name='actor_dense_1')(samba)
+    actor_output = Dense(1, activation='tanh', name='actor_output')(samba)
+    model = Model(inputs=[state_input, advantage, old_prediction], outputs=[actor_output])
+    model.compile(optimizer=Adam(lr=lr),
+                  loss=[proximal_policy_optimization_loss_continuous(
+                    advantage=advantage,
+                    old_prediction=old_prediction)])
+    print(model.summary())
+    self.model = model
+    critic_input = Input(state_input_shape, name='critic_state_input')
+    critic_path = Dense(256, activation='relu', name='critic_dense_0')(critic_input)
+    critic_path = Dense(256, activation='relu', name='critic_dense_1')(critic_path)
+    critic_out = Dense(1, name='critic_output')(critic_path)
+    critic = Model(inputs=[critic_input], outputs=[critic_out])
+    critic.compile(optimizer=Adam(lr=lr), loss='mse')
+    self.critic = critic
+    print(critic.summary())
 
 class DotDict(dict):
   def __getattr__(self, name):
@@ -457,6 +593,7 @@ def menu():
   parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='cm')
   parser.add_argument('--p2', '-q', help="player2: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='a')
   parser.add_argument('--radius', '-r', help="radius of hexagon", type=int, default=4)
+  parser.add_argument('--intelligent_resource', '-i', help="intelligent resource selection for moves", type=bool, nargs='?', const=True)
   parser.add_argument('--training_model', '-t', help="training model: c for conv, ca for conv alternate and f for flat", default='c')
 
   return parser.parse_known_args(sys.argv[1:])
@@ -492,8 +629,10 @@ if __name__ == '__main__':
     train = False
     test = True
 
-  g = HexagonGame(radius=args.radius)
-
+  if args.intelligent_resource:
+    g = HexagonGame(radius=args.radius, intelligent_resource_actors={})
+  else:
+    g = HexagonGame(radius=args.radius)
 
   # conv model
   conv_model = HexagonModel(g)
@@ -525,7 +664,21 @@ if __name__ == '__main__':
     if args.load_model:
       print("Load trainExamples from file")
       c.loadTrainExamples()
-  
+
+    if g.intelligent_resource_actors is not None:
+      rm1 = ResourceModel(g)
+      rm2 = ResourceModel(g)
+      g.intelligent_resource_actors[PlayerIds.Player1] = PPOAgent(1, rm1.model, rm1.critic,
+                                                            EpisodicMemory(experience_window_length=100000),
+                                                            (14,), name=PlayerNames.Player1, continuous=True,
+                                                                  nb_steps_warmup=30)
+      g.intelligent_resource_actors[PlayerIds.Player2] = PPOAgent(1, rm2.model, rm2.critic,
+                                                            EpisodicMemory(experience_window_length=100000),
+                                                            (14,), name=PlayerNames.Player2, continuous=True,
+                                                                  nb_steps_warmup=30)
+      g.intelligent_resource_actors[PlayerIds.Player1].training = True
+      g.intelligent_resource_actors[PlayerIds.Player2].training = True
+
     c.learn()
   
   if args.what == 'test':

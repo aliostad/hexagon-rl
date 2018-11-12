@@ -126,10 +126,11 @@ class Cell:
         transfer, fromCell.id, self.id, fromCell.resources)
     if self.owner != fromCell.owner:
       if self.resources > transfer:
-        return False, 'Cell {} cannot be captured since it has {} but transfer from {} is only {}'.format(
-          self.id, self.resources, fromCell.id, transfer)
+        return False, '{}: Cell {} cannot be captured since it has {} but transfer from {} is only {}'.format(
+          fromCell.owner, self.id, self.resources, fromCell.id, transfer)
       elif not self.id in fromCell.neighbours:
-        return False, 'Cell {} cannot capture {} since they are not neighbours'.format(fromCell.id, self.id)
+        return False, '{}: Cell {} cannot capture {} since they are not neighbours'.format(
+          fromCell.owner, fromCell.id, self.id)
 
     if self.owner == fromCell.owner:
       self.resources += transfer

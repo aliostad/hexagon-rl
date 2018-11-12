@@ -46,7 +46,7 @@ class PPOAgent(Agent):
                train_interval=None, memory_interval=1, target_model_update=.001,
                masker=None, training_epochs=10, train_on_last_episode=False,
                noise=1., exploration_ratio=0.99, continuous=False,
-               verbose=True, **kwargs):
+               verbose=True, name='default', **kwargs):
     super(PPOAgent, self).__init__(**kwargs)
 
     # Parameters.
@@ -64,6 +64,7 @@ class PPOAgent(Agent):
     self.noise = noise
     self.exploration_ratio = exploration_ratio
     self.continuous = continuous
+    self.name = name
 
     # Related objects.
     self.actor = actor
@@ -122,15 +123,23 @@ class PPOAgent(Agent):
       action = action_matrix = p[0] + np.random.normal(loc=0, scale=self.noise, size=p[0].shape)
     else:
       action = action_matrix = p[0]
-    return action, action_matrix, p
+    return action, action_matrix, p[0]
 
   def forward(self, observation):
-    self.last_observation = observation
-    masked_raw_action, raw_action, one_hot_action = self.select_action(observation)
-    self.last_raw_action = raw_action
-    self.last_masked_raw_action = masked_raw_action
-    self.last_one_hot_action = one_hot_action
-    return np.argmax(one_hot_action)
+    if self.continuous:
+      self.last_observation = observation
+      masked_raw_action, raw_action, one_hot_action = self.select_action_continuous(observation)
+      self.last_raw_action = raw_action
+      self.last_masked_raw_action = masked_raw_action
+      self.last_one_hot_action = one_hot_action
+      return raw_action
+    else:
+      self.last_observation = observation
+      masked_raw_action, raw_action, one_hot_action = self.select_action(observation)
+      self.last_raw_action = raw_action
+      self.last_masked_raw_action = masked_raw_action
+      self.last_one_hot_action = one_hot_action
+      return np.argmax(one_hot_action)
 
   def backward(self, reward, terminal):
     self.memory.append(self.last_observation,
@@ -154,6 +163,11 @@ class PPOAgent(Agent):
     return []
 
   def _run_training(self):
+    if len(self.memory.steps) == 0:
+      warnings.warn('Memory for {} is empty. cannot train'.format(self.name))
+      return # cannot train yet
+    else:
+      print('OK, here we go again with training')
     experiences = self.memory.sample(self.batch_size)
     observations, actions, pred_actions, rewards = ([], [], [], [])
     for idx, e in enumerate(experiences):
@@ -167,7 +181,7 @@ class PPOAgent(Agent):
     rewards = np.array(rewards)
     pred_values = self.critic.predict(observations)
     advantages = rewards - pred_values
-    advantages = (advantages - advantages.mean()) / (advantages.std() + EPSILON)
+    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-10)
     for e in range(self.training_epochs):
       self.actor.train_on_batch([observations, advantages, pred_actions], [actions])
     for e in range(self.training_epochs):
