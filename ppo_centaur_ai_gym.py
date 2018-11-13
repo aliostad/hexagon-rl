@@ -12,7 +12,7 @@ import hexagon_ui_api
 import os
 from square_grid import *
 import numpy as np
-from ppo import PPOAgent
+from ppo import *
 from episodic_memory import EpisodicMemory
 from ai_gym import *
 
@@ -79,7 +79,7 @@ class AttackModel:
     actor_output = Dense(EnvDef.SPATIAL_OUTPUT[0], activation='tanh')(merged)
     model = Model(inputs=[state_input, advantage, old_prediction], outputs=[actor_output])
     model.compile(optimizer=Adam(lr=EnvDef.LR),
-                  loss=[PPOAgent.proximal_policy_optimization_loss(
+                  loss=[proximal_policy_optimization_loss(
                     advantage=advantage,
                     old_prediction=old_prediction)])
 
