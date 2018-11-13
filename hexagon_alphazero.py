@@ -231,6 +231,36 @@ class HexagonGame(AlphaGame):
     vector[7] = sign * toResources
     return np.array(vector)
 
+  def _get_resource_isValid(self, move, world, proportion):
+    """
+
+    :type move: Move
+    :type world: World
+    :type proportion: float
+    :return: (int, bool)
+    """
+    if proportion > 1. or proportion < 0:
+      return move, False
+
+    is_attack = move.toCell not in world.uberCells
+    fromCell = world.uberCells[move.fromCell]
+    if is_attack:
+      diff = fromCell.resources + world.worldmap[move.toCell]
+      top_up = int(diff * proportion)
+      if top_up == 0:
+        top_up = 1
+      if top_up == diff:
+        top_up -= 1
+      move.resources = abs(world.worldmap[move.toCell]) + top_up
+    else:
+      amount = int(proportion * fromCell.resources)
+      if amount == 0:
+        amount = 1
+      if amount == fromCell.resources:
+        amount -= 1
+      move.resources = amount
+    return move, True
+
   def getNextState(self, board, player, action, executing=False):
     """
 
@@ -257,15 +287,9 @@ class HexagonGame(AlphaGame):
       if self.intelligent_resource_actors:
         if executing:
           self.intelligent_resource_actors[player].step += 1
-        amount = int(self.intelligent_resource_actors[player].forward(self.extract_resource_feature(move, world)))
-        candidateMove = Move(move.fromCell, move.toCell, amount)
-        if player == PlayerIds.Player1 and np.random.uniform() < 0.3:
-          move = candidateMove
-        elif self._is_resource_amount_valid(candidateMove, world):
-          reward = 0
-          move = candidateMove
-        else:
-          reward = candidateMove.resources - move.resources
+        proportion = self.intelligent_resource_actors[player].forward(self.extract_resource_feature(move, world))
+        move, isValid = self._get_resource_isValid(move, world, proportion)
+        reward = 0 if isValid else -50
       success, msg = b.try_transfer(move)
       if player < 0:
         b.increment_resources()
@@ -674,11 +698,11 @@ if __name__ == '__main__':
       g.intelligent_resource_actors[PlayerIds.Player1] = PPOAgent(1, rm1.model, rm1.critic,
                                                             EpisodicMemory(experience_window_length=100000),
                                                             (14,), name=PlayerNames.Player1, continuous=True,
-                                                                  nb_steps_warmup=30)
+                                                            nb_steps_warmup=80, batch_size=200, training_epochs=64)
       g.intelligent_resource_actors[PlayerIds.Player2] = PPOAgent(1, rm2.model, rm2.critic,
                                                             EpisodicMemory(experience_window_length=100000),
                                                             (14,), name=PlayerNames.Player2, continuous=True,
-                                                                  nb_steps_warmup=30)
+                                                            nb_steps_warmup=80,batch_size=200, training_epochs=64)
       g.intelligent_resource_actors[PlayerIds.Player1].training = True
       g.intelligent_resource_actors[PlayerIds.Player2].training = True
 
