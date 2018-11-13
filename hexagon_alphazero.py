@@ -78,14 +78,14 @@ def hydrate_board_from_model(a, radius, rect_width):
 
 class HexagonGame(AlphaGame):
   def __init__(self, radius, verbose=True, debug=False, allValidMovesPlayer=None,
-               intelligent_resource_actors=None, max_rounds=None):
+               intelligent_resource_actor=None, max_rounds=None):
     """
 
     :type radius: int
     :type verbose: bool
     :type debug: bool
     :type allValidMovesPlayer: bool
-    :type intelligent_resource_actors: dict of int: PPOAgent
+    :type intelligent_resource_actor: PPOAgent
     """
     self.radius = radius
     self.rect_width = radius * 2 - (radius % 2)
@@ -98,8 +98,9 @@ class HexagonGame(AlphaGame):
     self.verbose = verbose
     self.all_valid_moves_player = allValidMovesPlayer
     self.previous_allowed_boost = {}
-    self.intelligent_resource_actors = intelligent_resource_actors
+    self.intelligent_resource_actor = intelligent_resource_actor
     self.max_rounds = (radius**2 * 9) if max_rounds is None else max_rounds
+    self.intelligent_resource_players = {}
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
@@ -261,7 +262,7 @@ class HexagonGame(AlphaGame):
       move.resources = amount
     return move, True
 
-  def getNextState(self, board, player, action, executing=False):
+  def getNextState(self, board, player, action, executing=False, realPlayer=None):
     """
 
     :type board: ndarray
@@ -270,6 +271,8 @@ class HexagonGame(AlphaGame):
     :return: (ndarray, int)
     """
     reward = None
+    if realPlayer is None:
+      realPlayer = player
     #  if has no legal move then board does not change
     if action == self.NO_LEGAL_MOVE:
       return board, -player
@@ -284,12 +287,12 @@ class HexagonGame(AlphaGame):
     move, world = self.get_move_for_action(b, action, thePlayer)
 
     if move is not None:
-      if self.intelligent_resource_actors:
-        if executing:
-          self.intelligent_resource_actors[player].step += 1
-        proportion = self.intelligent_resource_actors[player].forward(self.extract_resource_feature(move, world))
+      if self.intelligent_resource_actor and realPlayer in self.intelligent_resource_players:
+        if executing and player == PlayerIds.Player1:
+          self.intelligent_resource_actor.step += 1
+        proportion = self.intelligent_resource_actor.forward(self.extract_resource_feature(move, world))
         move, isValid = self._get_resource_isValid(move, world, proportion)
-        reward = 0 if isValid else -50
+        reward = 0 if isValid else -5
       success, msg = b.try_transfer(move)
       if player < 0:
         b.increment_resources()
@@ -300,15 +303,18 @@ class HexagonGame(AlphaGame):
 
     newBoard = self._get_board_repr(b)
     if reward is not None:
-      result = self.getGameEnded(newBoard, player, not executing)
+      result = self.getGameEnded(newBoard, realPlayer, not executing)
       if result == 0:
-        self.intelligent_resource_actors[player].backward(reward, False)
+        self.intelligent_resource_actor.backward(reward, False, realPlayer)
       elif executing and result == 1:
-        self.intelligent_resource_actors[player].backward(reward + 1000, True)
+        self.intelligent_resource_actor.backward(reward + 1000, True, realPlayer)
+        self.intelligent_resource_actor.backward(reward - 1000, True, -realPlayer)
       elif executing and result == -1:
-        self.intelligent_resource_actors[player].backward(reward - 1000, True)
+        self.intelligent_resource_actor.backward(reward - 1000, True, realPlayer)
+        self.intelligent_resource_actor.backward(reward + 1000, True, -realPlayer)
       elif executing and result == 0.1:
-        self.intelligent_resource_actors[player].backward(reward + 100, True)
+        self.intelligent_resource_actor.backward(reward + 100, True, realPlayer)
+        self.intelligent_resource_actor.backward(reward + 100, True, -realPlayer)
     return newBoard, -player
 
   def getValidMoves(self, cannonicalBoard, player, realPlayer=None):
@@ -655,11 +661,7 @@ if __name__ == '__main__':
   if len(sys.argv) > 1 and sys.argv[1] == 'test':
     train = False
     test = True
-
-  if args.intelligent_resource:
-    g = HexagonGame(radius=args.radius, intelligent_resource_actors={}, verbose=False)
-  else:
-    g = HexagonGame(radius=args.radius, verbose=False)
+  g = HexagonGame(radius=args.radius, verbose=False)
 
   # conv model
   conv_model = HexagonModel(g)
@@ -680,7 +682,15 @@ if __name__ == '__main__':
     'ca': conv_alt_model,
     'f': flat_model
   }
-
+  rm = ResourceModel(g)
+  if os.path.exists('ppo_1_actor.h5f'):
+    rm.model.load_weights('ppo_1_actor.h5f')
+  if os.path.exists('ppo_1_critic.h5f'):
+    rm.critic.load_weights('ppo_1_critic.h5f')
+  g.intelligent_resource_actor = PPOAgent(1, rm.model, rm.critic,
+           EpisodicMemory(experience_window_length=100000),
+           (14,), name=PlayerNames.Player1, continuous=True,
+           nb_steps_warmup=80, batch_size=200, training_epochs=64)
   if args.what == 'train':
     
     _player_name_mapper.register_player_name('alpha1', PlayerNames.Player1)
@@ -692,25 +702,18 @@ if __name__ == '__main__':
       print("Load trainExamples from file")
       c.loadTrainExamples()
 
-    if g.intelligent_resource_actors is not None:
-      rm1 = ResourceModel(g)
-      rm2 = ResourceModel(g)
-      g.intelligent_resource_actors[PlayerIds.Player1] = PPOAgent(1, rm1.model, rm1.critic,
-                                                            EpisodicMemory(experience_window_length=100000),
-                                                            (14,), name=PlayerNames.Player1, continuous=True,
-                                                            nb_steps_warmup=80, batch_size=200, training_epochs=64)
-      g.intelligent_resource_actors[PlayerIds.Player2] = PPOAgent(1, rm2.model, rm2.critic,
-                                                            EpisodicMemory(experience_window_length=100000),
-                                                            (14,), name=PlayerNames.Player2, continuous=True,
-                                                            nb_steps_warmup=80,batch_size=200, training_epochs=64)
-      g.intelligent_resource_actors[PlayerIds.Player1].training = True
-      g.intelligent_resource_actors[PlayerIds.Player2].training = True
+    if args.intelligent_resource:
+      g.intelligent_resource_players[PlayerIds.Player1] = True
+      g.intelligent_resource_players[PlayerIds.Player2] = True
+      g.intelligent_resource_actor.training = True
+      g.intelligent_resource_actor.memories = {
+        PlayerIds.Player1: EpisodicMemory(experience_window_length=100000),
+        PlayerIds.Player2: EpisodicMemory(experience_window_length=100000)
+      }
 
       def checkpoint():
-        rm1.model.save_weights('ppo_1_actor.h5f', overwrite=True)
-        rm1.critic.save_weights('ppo_1_critic.h5f', overwrite=True)
-        rm2.model.save_weights('ppo_-1_actor.h5f', overwrite=True)
-        rm2.critic.save_weights('ppo_-1_critic.h5f', overwrite=True)
+        rm.model.save_weights('ppo_1_actor.h5f', overwrite=True)
+        rm.critic.save_weights('ppo_1_critic.h5f', overwrite=True)
 
       c.checkpointing_event = checkpoint
 
@@ -718,30 +721,36 @@ if __name__ == '__main__':
   
   if args.what == 'test':
 
-    flat_centaur = CentaurPlayer(g, flat_model, args)
-    conv_centaur = CentaurPlayer(g, conv_model, args)
-    conv_alt_centaur = CentaurPlayer(g, conv_alt_model, args)
-    random_player = RandomPlayer(g, -1)
-
     def get_player(v, id):
+      """
+
+      :type v: str
+      :param id:
+      :return:
+      """
       if v == 'a':
-        aliostad = AliostadPlayer(g, am_i_second_player=id<0)
         g.all_valid_moves_player = id
-        return aliostad, 'aliostad'
-      elif v == 'fm':
-        return flat_centaur, 'flat_centaur'
-      elif v == 'cm':
-        return conv_centaur, 'conv_centaur'
-      elif v == 'cam':
-        return conv_alt_centaur, 'conv_alt_centaur'
+        return AliostadPlayer(g, am_i_second_player=id<0), 'aliostad' + str(id), False
+      elif v.startswith('fm'):
+        return CentaurPlayer(g, flat_model, args), 'flat_centaur' + str(id), v.endswith('i')
+      elif v.startswith('cm'):
+        return CentaurPlayer(g, conv_model, args), 'conv_centaur' + str(id), v.endswith('i')
+      elif v.startswith('cam'):
+        return CentaurPlayer(g, conv_alt_model, args), 'conv_alt_centaur' + str(id), v.endswith('i')
       elif v == 'r':
         g.all_valid_moves_player = id
-        return random_player, 'random_player'
+        return RandomPlayer(g, -1), 'random_player', False
       else:
         raise Exception("Invalid player: " + v)
 
-    player1, player1_name = get_player(args.p1, 1)
-    player2, player2_name = get_player(args.p2, -1)
+    player1, player1_name, intelligent_resource_1 = get_player(args.p1, 1)
+    player2, player2_name, intelligent_resource_2 = get_player(args.p2, -1)
+    if intelligent_resource_1:
+      player1_name = player1_name + ' (i)'
+      g.intelligent_resource_players[PlayerIds.Player1] = True
+    if intelligent_resource_2:
+      player2_name = player2_name + ' (i)'
+      g.intelligent_resource_players[PlayerIds.Player2] = True
 
     _player_name_mapper.register_player_name(player1_name, PlayerNames.Player1)
     _player_name_mapper.register_player_name(player2_name, PlayerNames.Player2)
