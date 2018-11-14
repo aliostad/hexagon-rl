@@ -100,7 +100,7 @@ class HexagonGame(AlphaGame):
     self.all_valid_moves_player = allValidMovesPlayer
     self.previous_allowed_boost = {}
     self.intelligent_resource_actor = intelligent_resource_actor
-    self.max_rounds = (radius**2 * 9) if max_rounds is None else max_rounds
+    self.max_rounds = (radius**2 * 10) if max_rounds is None else max_rounds
     self.intelligent_resource_players = {}
     self.resource_quantisation = resource_quantisation
     self.resource_quant_for_player = {1: 0.7, -1:0.7}
@@ -566,13 +566,14 @@ class DotDict(dict):
 
 class AliostadPlayer:
 
-  def __init__(self, game, am_i_second_player=False):
+  def __init__(self, game, name, am_i_second_player=False):
     """
 
     :type game: HexagonGame
+    :type name: str
     """
     self.game = game
-    self.aliostad = Aliostad('aliostad', randomBoostFactor=None)
+    self.aliostad = Aliostad(name, randomBoostFactor=None)
     self.am_i_second_player = am_i_second_player
 
   def play(self, board):
@@ -588,7 +589,7 @@ class AliostadPlayer:
     world = Aliostad.build_world(cells)
     move = self.aliostad.movex(world)
     if move is None:
-      return self.game.rect_width**2  # no valid move
+      return self.game.NO_LEGAL_MOVE  # no valid move
     cid = move.fromCell
     idx = get_index_from_cellId(cid, self.game.rect_width, self.game.resource_quantisation)
     if self.game.resource_quantisation > 1:
@@ -644,6 +645,7 @@ def menu():
   parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='cm')
   parser.add_argument('--p2', '-q', help="player2: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='a')
   parser.add_argument('--radius', '-r', help="radius of hexagon", type=int, default=4)
+  parser.add_argument('--max_rounds', '-x', help="max rounds for a game", type=int)
   parser.add_argument('--intelligent_resource', '-i', help="intelligent resource selection for moves using PPO", type=bool, nargs='?', const=True)
   parser.add_argument('--no_ui', '-u', help="Not to serve API for UI", type=bool, nargs='?', const=True)
   parser.add_argument('--quantized_resource', '-z', help="intelligent resource selection for moves using quantized_resources", type=int, default=1)
@@ -681,7 +683,8 @@ if __name__ == '__main__':
   if len(sys.argv) > 1 and sys.argv[1] == 'test':
     train = False
     test = True
-  g = HexagonGame(radius=args.radius, verbose=False, resource_quantisation=args.quantized_resource)
+  g = HexagonGame(radius=args.radius, verbose=False,
+                  resource_quantisation=args.quantized_resource, max_rounds=args.max_rounds)
 
   # conv model
   conv_model = HexagonModel(g)
@@ -751,7 +754,8 @@ if __name__ == '__main__':
       """
       if v == 'a':
         g.all_valid_moves_player = id
-        return AliostadPlayer(g, am_i_second_player=id<0), 'aliostad' + str(id), False, False
+        name = 'aliostad' + str(id)
+        return AliostadPlayer(g, name, am_i_second_player=id<0), name, False, False
       elif v.startswith('fm'):
         return CentaurPlayer(g, flat_model, args), 'flat_centaur' + str(id), v.endswith('i'), v.endswith('z')
       elif v.startswith('cm'):
