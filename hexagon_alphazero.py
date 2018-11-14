@@ -78,7 +78,7 @@ def hydrate_board_from_model(a, radius, rect_width):
 
 class HexagonGame(AlphaGame):
   def __init__(self, radius, verbose=True, debug=False, allValidMovesPlayer=None,
-               intelligent_resource_actor=None, max_rounds=None):
+               intelligent_resource_actor=None, max_rounds=None, resource_quantisation=1):
     """
 
     :type radius: int
@@ -86,13 +86,14 @@ class HexagonGame(AlphaGame):
     :type debug: bool
     :type allValidMovesPlayer: bool
     :type intelligent_resource_actor: PPOAgent
+    :type resource_quantisation: int
     """
     self.radius = radius
     self.rect_width = radius * 2 - (radius % 2)
     self.model_input_shape = (self.rect_width, self.rect_width)
     self.game = None
     self.game_no = 0
-    self.NO_LEGAL_MOVE = self.rect_width ** 2
+    self.NO_LEGAL_MOVE = self.rect_width ** 2 * resource_quantisation
     self.validMovesHistory = []  # for debugging
     self.debug = debug
     self.verbose = verbose
@@ -101,12 +102,14 @@ class HexagonGame(AlphaGame):
     self.intelligent_resource_actor = intelligent_resource_actor
     self.max_rounds = (radius**2 * 9) if max_rounds is None else max_rounds
     self.intelligent_resource_players = {}
+    self.resource_quantisation = resource_quantisation
+    self.resource_quant_for_player = {1: 0.7, -1:0.7}
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
 
   def getActionSize(self):
-    return (self.rect_width ** 2) + 1  # adding one when no legal move possible
+    return (self.rect_width ** 2 * self.resource_quantisation) + 1  # adding one when no legal move possible
 
   def _get_board_repr(self, board):
     """
@@ -124,27 +127,45 @@ class HexagonGame(AlphaGame):
         result[thid.y][thid.x] = value
     return result
 
-  def get_move_for_action(self, board, action, player):
+  def get_move_for_action(self, board, action, hex_player, realPlayerId):
     """
 
     :type board: Board
     :type action: int
-    :type player: AlphaAliostad
+    :type player: Aliostad
     :return: Move, World
     """
-    cellId = get_cellId_from_index(action, self.rect_width)
-    cells = board.get_cell_infos_for_player(player.name)
+    if action == self.NO_LEGAL_MOVE:  # means no valid actions possible
+      return None, None, None
+    reward = None
+    cellId = get_cellId_from_index(action, self.rect_width, self.resource_quantisation)
+    cells = board.get_cell_infos_for_player(hex_player.name)
     world = Aliostad.build_world(cells)
-
     if cellId not in world.uberCells:
       print('Not in: {}'.format(cellId))
-      return None
+      raise Exception('woooowww... what do you think you are doing?!')
     cellFrom = world.uberCells[cellId]
     if cellFrom.canAttackOrExpand:
-      move = player.getAttack(world, cellId)
+      move = hex_player.getAttack(world, cellId)
     else:
-      move = player.getBoost(world, cellId)
-    return move, world
+      move = hex_player.getBoost(world, cellId)
+    toResources = world.worldmap[move.toCell]  # negative if attack
+    is_attack = False if move.toCell in world.uberCells else True
+
+    if self.intelligent_resource_actor and realPlayerId in self.intelligent_resource_players:
+      proportion = self.intelligent_resource_actor.forward(self.extract_resource_feature(move, world))
+      move, isValid = self._get_resource_isValid(move, world, proportion)
+      reward = 0 if isValid else -5
+    if self.resource_quantisation > 1:
+      proportion = self.resource_quant_for_player[realPlayerId] if \
+         realPlayerId in self.resource_quant_for_player else \
+        ((action % self.resource_quantisation)+ 1) / (self.resource_quantisation + 1.)
+      if is_attack:
+        move.resources = abs(toResources) + max(int(proportion * (cellFrom.resources + toResources)), 1)
+      else:
+        move.resources = max(int(proportion * cellFrom.resources), 1)
+    return move, world, reward
+
 
   def getInitBoard(self):
 
@@ -270,7 +291,6 @@ class HexagonGame(AlphaGame):
     :param action: int
     :return: (ndarray, int)
     """
-    reward = None
     if realPlayer is None:
       realPlayer = player
     #  if has no legal move then board does not change
@@ -283,16 +303,10 @@ class HexagonGame(AlphaGame):
     else:
       b = hex_board
 
-    thePlayer = filter(lambda x: x.name == _player_name_mapper.get_hex_name(str(player)), self.game.real_players)[0]
-    move, world = self.get_move_for_action(b, action, thePlayer)
+    hex_player = filter(lambda x: x.name == _player_name_mapper.get_hex_name(str(player)), self.game.real_players)[0]
+    move, world, reward = self.get_move_for_action(b, action, hex_player, realPlayer)
 
     if move is not None:
-      if self.intelligent_resource_actor and realPlayer in self.intelligent_resource_players:
-        if executing and player == PlayerIds.Player1:
-          self.intelligent_resource_actor.step += 1
-        proportion = self.intelligent_resource_actor.forward(self.extract_resource_feature(move, world))
-        move, isValid = self._get_resource_isValid(move, world, proportion)
-        reward = 0 if isValid else -5
       success, msg = b.try_transfer(move)
       if player < 0:
         b.increment_resources()
@@ -303,6 +317,8 @@ class HexagonGame(AlphaGame):
 
     newBoard = self._get_board_repr(b)
     if reward is not None:
+      if executing and player == PlayerIds.Player1:
+        self.intelligent_resource_actor.step += 1
       result = self.getGameEnded(newBoard, realPlayer, not executing)
       if result == 0:
         self.intelligent_resource_actor.backward(reward, False, realPlayer)
@@ -328,8 +344,6 @@ class HexagonGame(AlphaGame):
     cells = hex_board.get_cell_infos_for_player(_player_name_mapper.get_hex_name(str(player)))
     world = Aliostad.build_world(cells)
     result = np.zeros(self.getActionSize())
-    if self.debug:
-      self.validMovesHistory.append(result)
     include_attack = True
     include_boost = False
     include_no_legal_move = False
@@ -347,9 +361,10 @@ class HexagonGame(AlphaGame):
       include_boost = False
 
     for uc in world.uberCells.values():
-      idx = get_index_from_cellId(uc.id, self.rect_width)
+      idx = get_index_from_cellId(uc.id, self.rect_width, self.resource_quantisation)
       if (uc.canAttackOrExpand and include_attack) or (uc.resources > 1 and include_boost):
-        result[idx] = 1
+        for i in range(0, self.resource_quantisation):
+          result[idx + i] = 1
     if result.sum() == 0 or include_no_legal_move:
       result[-1] = 1  # last cell is for NoValidMove
     return result
@@ -399,8 +414,9 @@ class HexagonGame(AlphaGame):
 
   def getSymmetries(self, board, pi):
     # mirror, rotational
-    assert(len(pi) == self.rect_width**2+1)  # 1 for pass
-    pi_board = np.reshape(pi[:-1], (self.rect_width, self.rect_width))
+    assert(len(pi) == self.rect_width**2*self.resource_quantisation+1)  # 1 for pass
+    pi_board = np.reshape(pi[:-1], (self.rect_width, self.rect_width, self.resource_quantisation))
+
     l = []
 
     for i in range(1, 5):
@@ -574,7 +590,9 @@ class AliostadPlayer:
     if move is None:
       return self.game.rect_width**2  # no valid move
     cid = move.fromCell
-    idx = get_index_from_cellId(cid, self.game.rect_width)
+    idx = get_index_from_cellId(cid, self.game.rect_width, self.game.resource_quantisation)
+    if self.game.resource_quantisation > 1:
+      idx += int(0.7 * (self.game.resource_quantisation+1))
     return idx
 
 class CentaurPlayer:
@@ -626,7 +644,9 @@ def menu():
   parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='cm')
   parser.add_argument('--p2', '-q', help="player2: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='a')
   parser.add_argument('--radius', '-r', help="radius of hexagon", type=int, default=4)
-  parser.add_argument('--intelligent_resource', '-i', help="intelligent resource selection for moves", type=bool, nargs='?', const=True)
+  parser.add_argument('--intelligent_resource', '-i', help="intelligent resource selection for moves using PPO", type=bool, nargs='?', const=True)
+  parser.add_argument('--no_ui', '-u', help="Not to serve API for UI", type=bool, nargs='?', const=True)
+  parser.add_argument('--quantized_resource', '-z', help="intelligent resource selection for moves using quantized_resources", type=int, default=1)
   parser.add_argument('--training_model', '-t', help="training model: c for conv, ca for conv alternate and f for flat", default='c')
 
   return parser.parse_known_args(sys.argv[1:])
@@ -661,21 +681,22 @@ if __name__ == '__main__':
   if len(sys.argv) > 1 and sys.argv[1] == 'test':
     train = False
     test = True
-  g = HexagonGame(radius=args.radius, verbose=False)
+  g = HexagonGame(radius=args.radius, verbose=False, resource_quantisation=args.quantized_resource)
 
   # conv model
   conv_model = HexagonModel(g)
-  conv_model.load_checkpoint('models', 'conv_{}.tar'.format(args.radius))
+  conv_model.load_checkpoint('models', 'conv_{}_{}.tar'.format(args.radius, g.resource_quantisation))
 
   # conv alt model
   conv_alt_model = HexagonAlternativeModel(g)
-  conv_alt_model.load_checkpoint('models', 'conv_alt_{}.tar'.format(args.radius))
+  conv_alt_model.load_checkpoint('models', 'conv_alt_{}_{}.tar'.format(args.radius, g.resource_quantisation))
 
   # flat model
   flat_model = HexagonFlatModel(g)
-  flat_model.load_checkpoint('models', 'flat_{}.tar'.format(args.radius))
+  flat_model.load_checkpoint('models', 'flat_{}_{}.tar'.format(args.radius, g.resource_quantisation))
 
-  hexagon_ui_api.run_in_background()
+  if not args.no_ui:
+    hexagon_ui_api.run_in_background()
 
   training_models = {
     'c': conv_model,
@@ -692,7 +713,7 @@ if __name__ == '__main__':
            (14,), name=PlayerNames.Player1, continuous=True,
            nb_steps_warmup=80, batch_size=200, training_epochs=64)
   if args.what == 'train':
-    
+
     _player_name_mapper.register_player_name('alpha1', PlayerNames.Player1)
     _player_name_mapper.register_player_name('alpha2', PlayerNames.Player2)
 
@@ -730,27 +751,33 @@ if __name__ == '__main__':
       """
       if v == 'a':
         g.all_valid_moves_player = id
-        return AliostadPlayer(g, am_i_second_player=id<0), 'aliostad' + str(id), False
+        return AliostadPlayer(g, am_i_second_player=id<0), 'aliostad' + str(id), False, False
       elif v.startswith('fm'):
-        return CentaurPlayer(g, flat_model, args), 'flat_centaur' + str(id), v.endswith('i')
+        return CentaurPlayer(g, flat_model, args), 'flat_centaur' + str(id), v.endswith('i'), v.endswith('z')
       elif v.startswith('cm'):
-        return CentaurPlayer(g, conv_model, args), 'conv_centaur' + str(id), v.endswith('i')
+        return CentaurPlayer(g, conv_model, args), 'conv_centaur' + str(id), v.endswith('i'), v.endswith('z')
       elif v.startswith('cam'):
-        return CentaurPlayer(g, conv_alt_model, args), 'conv_alt_centaur' + str(id), v.endswith('i')
+        return CentaurPlayer(g, conv_alt_model, args), 'conv_alt_centaur' + str(id), v.endswith('i'), v.endswith('z')
       elif v == 'r':
         g.all_valid_moves_player = id
-        return RandomPlayer(g, -1), 'random_player', False
+        return RandomPlayer(g, -1), 'random_player', False, False
       else:
         raise Exception("Invalid player: " + v)
 
-    player1, player1_name, intelligent_resource_1 = get_player(args.p1, 1)
-    player2, player2_name, intelligent_resource_2 = get_player(args.p2, -1)
+    player1, player1_name, intelligent_resource_1, quantized_resource_1 = get_player(args.p1, 1)
+    player2, player2_name, intelligent_resource_2, quantized_resource_2 = get_player(args.p2, -1)
     if intelligent_resource_1:
-      player1_name = player1_name + ' (i)'
+      player1_name += ' (i)'
       g.intelligent_resource_players[PlayerIds.Player1] = True
     if intelligent_resource_2:
-      player2_name = player2_name + ' (i)'
+      player2_name += ' (i)'
       g.intelligent_resource_players[PlayerIds.Player2] = True
+    if quantized_resource_1:
+      player1_name += ' (z)'
+      del g.resource_quant_for_player[PlayerIds.Player1]
+    if quantized_resource_2:
+      player2_name += ' (z)'
+      del g.resource_quant_for_player[PlayerIds.Player2]
 
     _player_name_mapper.register_player_name(player1_name, PlayerNames.Player1)
     _player_name_mapper.register_player_name(player2_name, PlayerNames.Player2)
