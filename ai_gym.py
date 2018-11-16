@@ -74,7 +74,7 @@ class SuperCentaurPlayer(Aliostad):
 class HierarchicalCentaurEnv(Env):
   def __init__(self, centaur_boost_likelihood, opponent_randomness=None,
                boosting_off=False, attack_off=False, centaur_name='centaur',
-               game_name='1', move_reward_multiplier=10, max_rounds=2000,
+               slot_name='1', move_reward_multiplier=10, max_rounds=2000,
                episode_reward=1000, radius=5, game_verbose=True,
                move_shuffle=True, move_handicap=None):
     self.boosting_off = boosting_off
@@ -85,13 +85,12 @@ class HierarchicalCentaurEnv(Env):
     self._seed = 0
     self.centaur = None
     self.cell_count = 1
-    self.resources = 100
     self.world = None
     self.leaderBoard = {}
     self.cellLeaderBoard = {}
     self.centaur_boost_likelihood = centaur_boost_likelihood
     self.centaur_name = centaur_name
-    self.game_name = game_name
+    self.slot_name = slot_name
     self.move_reward_multiplier = move_reward_multiplier
     self.max_rounds = max_rounds
     self.episode_reward = episode_reward
@@ -99,6 +98,7 @@ class HierarchicalCentaurEnv(Env):
     self.game_verbose = game_verbose
     self.move_shuffle = move_shuffle
     self.move_handicap = move_handicap
+    self.episode_number = 0
 
   def configure(self, *args, **kwargs):
     pass
@@ -153,7 +153,6 @@ class HierarchicalCentaurEnv(Env):
 
   def reset(self):
     self.cell_count = 1
-    self.resources = 100
     if self.game is not None:
       self.game.finish()
 
@@ -163,9 +162,10 @@ class HierarchicalCentaurEnv(Env):
     self.players = [Aliostad('aliostad', randomBoostFactor=self.opponent_randomness, moveHandicap=self.move_handicap),
                     self.centaur]
     shuffle(self.players)
-    self.game = Game(self.game_name, self.players, radius=self.radius,
+    self.episode_number += 1
+    self.game = Game(self.slot_name, str(self.episode_number), self.players, radius=self.radius,
                      verbose=self.game_verbose, move_shuffle=self.move_shuffle)
-    hexagon_ui_api.games[self.game_name] = self.game
+    hexagon_ui_api.games[self.slot_name] = self.game
     self.game.start()
 
     playerView = PlayerView(self.game.round_no, self.game.board.get_cell_infos_for_player(self.centaur_name))

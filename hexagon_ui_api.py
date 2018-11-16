@@ -16,6 +16,10 @@ modelFile = './save_tmp.h5'
 
 class GameSnapshot:
   def __init__(self, game):
+    """
+
+    :type game: Game
+    """
     self.boardSnapshot = game.board.get_snapshot()
     self.stat = GameStat(game.name, game.round_no, game.get_player_stats(), False)
     self.radius = game.board.radius
@@ -32,16 +36,16 @@ def browse_default():
 def staticx(path):
    return send_from_directory('ui', path)
 
-@app.route('/api/game/<gameId>', methods=['GET'])
-def get_game_status(gameId):
+@app.route('/api/game/<slot>', methods=['GET'])
+def get_game_status(slot):
   """
 
-  :type gameId: str
+  :type slot: str
   :return:
   """
   global games
-  if gameId in games:
-    game = games[gameId]
+  if slot in games:
+    game = games[slot]
     snapshot = GameSnapshot(game)
     return jsonify(json.loads(jsonpickle.dumps(snapshot)))
 

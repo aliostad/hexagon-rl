@@ -4,13 +4,13 @@ $(function() {
 
 var state = {
   baseUrl: "/api/game/",
-  gameName: "1",
+  slotName: "1",
   gameRunning: false,
   displayLoaded: false
 };
 
 state.getUrl = function() {
-  return state.baseUrl + state.gameName;
+  return state.baseUrl + state.slotName;
 };
 
 function getRandomColor() {

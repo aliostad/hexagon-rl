@@ -13,6 +13,6 @@ class OtherTests(TestCase):
     self.assertNotEqual(b.cells[cid], b2.cells[cid])
 
   def test_deep_copy_game(self):
-    g = Game("1", Aliostad("1"), Aliostad("-1"))
+    g = Game("1", "123", Aliostad("1"), Aliostad("-1"))
     g2 = g.clone()
     self.assertNotEqual(g.players[0], g2.players[0])

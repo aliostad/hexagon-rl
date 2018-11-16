@@ -105,13 +105,15 @@ class Player:
 
 
 class Game:
-  def __init__(self, name, players, radius=None, verbose=True, move_shuffle=True):
+  def __init__(self, slot, name, players, radius=None, verbose=True, move_shuffle=True):
     """
 
+    :type slot: str
     :type name: str
     :type players: list of Player
     :type radius: int
     """
+    self.slot = slot
     self.name = name
     self.players = players
     self.radius = Game.get_optimum_board_size(len(players)) if radius is None else radius
@@ -123,7 +125,7 @@ class Game:
     self.move_shuffle = move_shuffle
 
   def clone(self):
-    g = Game(self.name,
+    g = Game(self.slot, self.name,
              map(lambda x: x.clone(), self.players),
              self.radius,
              verbose=False,

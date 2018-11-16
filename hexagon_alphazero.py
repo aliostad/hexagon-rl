@@ -78,7 +78,8 @@ def hydrate_board_from_model(a, radius, rect_width):
 
 class HexagonGame(AlphaGame):
   def __init__(self, radius, verbose=True, debug=False, allValidMovesPlayer=None,
-               intelligent_resource_actor=None, max_rounds=None, resource_quantisation=1):
+               intelligent_resource_actor=None, max_rounds=None, resource_quantisation=1,
+               quantization_proportion=0.7):
     """
 
     :type radius: int
@@ -103,7 +104,8 @@ class HexagonGame(AlphaGame):
     self.max_rounds = (radius**2 * 10) if max_rounds is None else max_rounds
     self.intelligent_resource_players = {}
     self.resource_quantisation = resource_quantisation
-    self.resource_quant_for_player = {1: 0.7, -1:0.7}
+    self.resource_quant_for_player = {1: quantization_proportion, -1:quantization_proportion}
+    self.episode_number = 0
 
   def getBoardSize(self):
     return self.rect_width, self.rect_width
@@ -173,7 +175,8 @@ class HexagonGame(AlphaGame):
     players = [Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player1)),
                       Aliostad(_player_name_mapper.get_hex_name(PlayerNames.Player2))]
     np.random.shuffle(players)
-    self.game = Game('1', players, self.radius, verbose=self.verbose)
+    self.episode_number += 1
+    self.game = Game('1', str(self.episode_number), players, self.radius, verbose=self.verbose)
     self.game.start()
     hexagon_ui_api.games['1'] = self.game
     if self.verbose:
@@ -566,7 +569,7 @@ class DotDict(dict):
 
 class AliostadPlayer:
 
-  def __init__(self, game, name, am_i_second_player=False):
+  def __init__(self, game, name, am_i_second_player=False, quantization_proportion=0.7):
     """
 
     :type game: HexagonGame
@@ -575,6 +578,7 @@ class AliostadPlayer:
     self.game = game
     self.aliostad = Aliostad(name, randomBoostFactor=None)
     self.am_i_second_player = am_i_second_player
+    self.quantization_proportion = quantization_proportion
 
   def play(self, board):
     """
@@ -593,7 +597,7 @@ class AliostadPlayer:
     cid = move.fromCell
     idx = get_index_from_cellId(cid, self.game.rect_width, self.game.resource_quantisation)
     if self.game.resource_quantisation > 1:
-      idx += int(0.7 * (self.game.resource_quantisation+1))
+      idx += int(self.quantization_proportion * (self.game.resource_quantisation+1))
     return idx
 
 class CentaurPlayer:
@@ -671,7 +675,8 @@ if __name__ == '__main__':
     'checkpoint': './temp/',
     'load_model': False,
     'load_folder_file': ('./temp/', 'temp.pth.tar'),
-    'numItersForTrainExamplesHistory': 20
+    'numItersForTrainExamplesHistory': 20,
+    'default_quantization_proportion': 0.7
   })
 
   known, unknown = menu()
