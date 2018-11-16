@@ -115,7 +115,7 @@ class MCTS():
         next_s, next_player = self.game.getNextState(canonicalBoard, 1, a, executing=False, realPlayer=realPlayer)
         next_s = self.game.getCanonicalForm(next_s, next_player)
 
-        if recr > 20:
+        if recr > 100:
             print('going recursion... :/')
         v = self.search(next_s, recr+1, realPlayer)
 

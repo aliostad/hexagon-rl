@@ -106,7 +106,7 @@ def get_thid_from_cellId(cid, rect_width):
   return thid
 
 
-def get_index_from_cellId(cid, rect_width):
+def get_index_from_cellId(cid, rect_width, number_of_features=1):
   """
 
   :type cid: CellId
@@ -115,7 +115,7 @@ def get_index_from_cellId(cid, rect_width):
   """
   thid = get_thid_from_cellId(cid, rect_width)
   idx = thid.y * rect_width + thid.x
-  return idx
+  return idx * number_of_features
 
 
 def get_cellId_from_hid(hid, rect_width):
@@ -130,13 +130,14 @@ def get_cellId_from_hid(hid, rect_width):
   return cellId
 
 
-def get_cellId_from_index(index, rect_width):
+def get_cellId_from_index(index, rect_width, number_of_features=1):
   """
 
   :type index: int
   :type rect_width: int
   :return:
   """
+  index = index / number_of_features
   y = index / rect_width
   x = index % rect_width
   hid = GridCellId(x, y)
