@@ -602,7 +602,7 @@ class AliostadPlayer:
 
 class CentaurPlayer:
   
-  def __init__(self, game, nnet, args):
+  def __init__(self, game, nnet, playerId, args):
     """
     
     :type game: HexagonGame
@@ -611,6 +611,7 @@ class CentaurPlayer:
     self.game = game
     self.nnet = nnet
     self.mcts = MCTS(game, nnet, args)
+    self.playerId = playerId
 
   def play(self, board):
     """
@@ -618,7 +619,10 @@ class CentaurPlayer:
     :type board: ndarray
     :return: 
     """
-    return np.argmax(self.mcts.getActionProb(board, temp=0))
+    probs = self.mcts.getActionProb(board, temp=0, curPlayer=self.playerId)
+    valids = self.game.getValidMoves(board, 1, self.playerId)
+    action = np.argmax(valids * probs)
+    return action
 
 class RandomPlayer:
 
@@ -762,11 +766,11 @@ if __name__ == '__main__':
         name = 'aliostad' + str(id)
         return AliostadPlayer(g, name, am_i_second_player=id<0), name, False, False
       elif v.startswith('fm'):
-        return CentaurPlayer(g, flat_model, args), 'flat_centaur' + str(id), v.endswith('i'), v.endswith('z')
+        return CentaurPlayer(g, flat_model, id, args), 'flat_centaur' + str(id), v.endswith('i'), v.endswith('z')
       elif v.startswith('cm'):
-        return CentaurPlayer(g, conv_model, args), 'conv_centaur' + str(id), v.endswith('i'), v.endswith('z')
+        return CentaurPlayer(g, conv_model, id, args), 'conv_centaur' + str(id), v.endswith('i'), v.endswith('z')
       elif v.startswith('cam'):
-        return CentaurPlayer(g, conv_alt_model, args), 'conv_alt_centaur' + str(id), v.endswith('i'), v.endswith('z')
+        return CentaurPlayer(g, conv_alt_model, id, args), 'conv_alt_centaur' + str(id), v.endswith('i'), v.endswith('z')
       elif v == 'r':
         g.all_valid_moves_player = id
         return RandomPlayer(g, -1), 'random_player', False, False
