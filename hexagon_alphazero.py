@@ -653,6 +653,7 @@ def menu():
   parser.add_argument('--p1', '-p', help="player1: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='cm')
   parser.add_argument('--p2', '-q', help="player2: r for random, a for Aliostad, fm for flat model, cm for conv model and cam for conv alternate model", default='a')
   parser.add_argument('--radius', '-r', help="radius of hexagon", type=int, default=4)
+  parser.add_argument('--episodes', '-e', help="number of episodes to run the pit (test)", type=int, default=20)
   parser.add_argument('--max_rounds', '-x', help="max rounds for a game", type=int)
   parser.add_argument('--intelligent_resource', '-i', help="intelligent resource selection for moves using PPO", type=bool, nargs='?', const=True)
   parser.add_argument('--no_ui', '-u', help="Not to serve API for UI", type=bool, nargs='?', const=True)
@@ -708,7 +709,8 @@ if __name__ == '__main__':
   flat_model.load_checkpoint('models', 'flat_{}_{}.tar'.format(args.radius, g.resource_quantisation))
 
   if not args.no_ui:
-    hexagon_ui_api.run_in_background()
+    with hexagon_ui_api.run_in_background() as runner:
+      pass
 
   training_models = {
     'c': conv_model,
@@ -796,4 +798,4 @@ if __name__ == '__main__':
     _player_name_mapper.register_player_name(player2_name, PlayerNames.Player2)
 
     arena = Arena(player1.play, player2.play, g, display=dummyDisplay)
-    print(arena.playGames(20, verbose=True))
+    print(arena.playGames(args.episodes, verbose=True))

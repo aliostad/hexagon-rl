@@ -55,10 +55,19 @@ def get_game_status(slot):
 def run_app():
   app.run(debug=False, use_reloader=False, host='0.0.0.0', port=19690, threaded=True)
 
+class UiRunner:
+
+  def __enter__(self):
+    th = threading.Thread(target=run_app)
+    th.setDaemon(True)
+    th.start()
+    self.thread = th
+
+  def __exit__(self, exc_type, exc_val, exc_tb):
+    self.thread.join(1)
+
 def run_in_background():
   log = logging.getLogger('werkzeug')
   log.disabled = True
   app.logger.disabled = True
-  th = threading.Thread(target=run_app)
-  th.setDaemon(True)
-  th.start()
+  return UiRunner()
