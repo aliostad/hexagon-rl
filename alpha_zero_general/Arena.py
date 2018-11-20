@@ -37,7 +37,10 @@ class Arena():
         curPlayer = player_to_start
         board = self.game.getInitBoard()
         it = 0
-        while self.game.getGameEnded(board, curPlayer, askingForAFriend=False)==0:
+        while True:
+            result = self.game.getGameEnded(board, curPlayer, askingForAFriend=False)
+            if result != 0:
+                break
             it+=1
             if verbose:
                 assert(self.display)
@@ -47,15 +50,15 @@ class Arena():
             action = players[curPlayer+1](canon)
             valids = self.game.getValidMoves(canon, 1, curPlayer)
 
-            if valids[action]==0:
+            if valids[action]==0 and action < len(valids) - 1:
                 print('hoy! wrong action: {}'.format(action))
                 action = len(valids) - 1
             board, curPlayer = self.game.getNextState(board, curPlayer, action, executing=True)
         if verbose:
             assert(self.display)
-            print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(board, 1)))
+            print("Game over: Turn ", str(it), "Result ", str(result))
             self.display(board)
-        return self.game.getGameEnded(board, 1, askingForAFriend=False)
+        return result
 
     def playGames(self, num, verbose=False):
         """
@@ -67,6 +70,10 @@ class Arena():
             twoWon: games won by player2
             draws:  games won by nobody
         """
+
+        def output_status(ones, twos, draws):
+            print('Player1: {}\t\tPlayer2: {}'.format(ones + 0.5*draws, twos + 0.5*draws))
+
         eps_time = AverageMeter()
         bar = Bar('Arena.playGames', max=num)
         end = time.time()
@@ -86,6 +93,7 @@ class Arena():
             else:
                 draws+=1
             # bookkeeping + plot progress
+            output_status(oneWon, twoWon, draws)
             eps += 1
             eps_time.update(time.time() - end)
             end = time.time()
@@ -101,6 +109,7 @@ class Arena():
                 twoWon+=1
             else:
                 draws+=1
+            output_status(oneWon, twoWon, draws)
             # bookkeeping + plot progress
             eps += 1
             eps_time.update(time.time() - end)
