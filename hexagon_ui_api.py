@@ -70,4 +70,6 @@ def run_in_background():
   log = logging.getLogger('werkzeug')
   log.disabled = True
   app.logger.disabled = True
-  return UiRunner()
+  th = threading.Thread(target=run_app)
+  th.setDaemon(True)
+  th.start()

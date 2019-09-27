@@ -2,6 +2,7 @@ from hexagon_agent import *
 import hexagon_ui_api
 import time
 
+
 class CentaurGym:
   def __init__(self):
     self.players = [
@@ -14,7 +15,7 @@ class CentaurGym:
 
   def start(self, games=10, rounds=1000):
     for gid in range(0, games):
-      self.game = Game('my-game', self.players, 6)
+      self.game = Game('1', 'my-game', self.players, 12)
       hexagon_ui_api.games['1'] = gym.game
       self.game.start()
       for i in range(0, rounds):
