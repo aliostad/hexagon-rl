@@ -8,14 +8,13 @@ import logging
 import json
 
 games = {}
+slot = None
 t = time.time()
 app = Flask(__name__)
 application = app
-model = None
-modelFile = './save_tmp.h5'
 
 class GameSnapshot:
-  def __init__(self, game):
+  def __init__(self, game, slot):
     """
 
     :type game: Game
@@ -23,6 +22,7 @@ class GameSnapshot:
     self.boardSnapshot = game.board.get_snapshot()
     self.stat = GameStat(game.name, game.round_no, game.get_player_stats(), False)
     self.radius = game.board.radius
+    self.slot = slot
 
 @app.route('/', methods=['GET'])
 def browse_default():
@@ -36,17 +36,18 @@ def browse_default():
 def staticx(path):
    return send_from_directory('ui', path)
 
-@app.route('/api/game/<slot>', methods=['GET'])
-def get_game_status(slot):
+@app.route('/api/game/<slotName>', methods=['GET'])
+def get_game_status(slotName):
   """
 
   :type slot: str
   :return:
   """
   global games
-  if slot in games:
-    game = games[slot]
-    snapshot = GameSnapshot(game)
+  global slot
+  if slotName in games:
+    game = games[slotName]
+    snapshot = GameSnapshot(game, slot)
     return jsonify(json.loads(jsonpickle.dumps(snapshot)))
 
   else:

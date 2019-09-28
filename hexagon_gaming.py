@@ -2,6 +2,7 @@ import math
 from hexagon import *
 import numpy as np
 
+
 class Move:
   def __init__(self, fromCell, toCell, resources):
     """
@@ -43,6 +44,7 @@ class PlayerStat:
   def __str__(self):
     return '{}: {}\t\t{}\t{}'.format(self.roundNo, self.playerName, self.cellsOwned, self.totalResources)
 
+
 class GameStat:
   def __init__(self, name, rnd, playerStats, finished):
     """
@@ -66,11 +68,13 @@ class Player:
   def __init__(self, name):
     self.name = name
     self._started = False
+    self.current_game = None
 
-  def start(self):
+  def start(self, gameName=None):
     if self._started:
       raise RuntimeError('Player already started')
     self._started = True
+    self.current_game = gameName
     return True
 
   def finish(self):
@@ -104,8 +108,30 @@ class Player:
     pass
 
 
+class Slot:
+  def __init__(self, name, players):
+    self.name = name
+    self.games = []
+    self.player_scores = {}
+    for p in players:
+      self.player_scores[p.name] = 0
+
+
+  def add_game_stats(self, gameStat):
+    """
+
+    :type GameStat:
+    :return:
+    """
+    self.games.append(gameStat)
+    for ps in gameStat.playerStats:
+      if ps.playerName not in self.player_scores:
+        self.player_scores[ps.playerName] = 0
+    self.player_scores[gameStat.playerStats[0].playerName] += 1
+
+
 class Game:
-  def __init__(self, slot, name, players, radius=None, verbose=True, move_shuffle=True):
+  def __init__(self, slot, name, players, maxRounds, radius=None, verbose=True, move_shuffle=True):
     """
 
     :type slot: str
@@ -119,6 +145,7 @@ class Game:
     self.radius = Game.get_optimum_board_size(len(players)) if radius is None else radius
     self.real_players = []
     self._started = False
+    self.max_rounds = maxRounds
     self.round_no = 0
     self.board = None
     self.verbose = verbose
@@ -222,7 +249,7 @@ class Game:
     # OK now increment
     self.board.increment_resources()
     stats = self.get_player_stats()
-    isFinished = max(map(lambda x: x.cellsOwned, stats)) == sum(map(lambda x: x.cellsOwned, stats))
+    isFinished = self.round_no >= self.max_rounds or max(map(lambda x: x.cellsOwned, stats)) == sum(map(lambda x: x.cellsOwned, stats))
     return self.get_player_stats(), isFinished, self._finish_players() if isFinished else {}
 
   def get_player_stat(self, name):

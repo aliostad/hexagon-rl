@@ -230,8 +230,8 @@ function updateDisplayBoard(snapshot) {
     var stat = playerStats[i];
     var id = "#standing_" + i;
     d3.select(id)
-      .text(stat.playerName +
-        " - " + stat.cellsOwned + " (" + (stat.totalResource ? stat.totalResource : stat.totalResources) + ")")
+      .text(
+      `[${snapshot.slot.player_scores[stat.playerName]}] ${stat.playerName} - ${stat.cellsOwned} (${stat.totalResource ? stat.totalResource : stat.totalResources})`)
       .style("background-color",
                getColour(stat.playerName));
 
