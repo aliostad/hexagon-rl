@@ -1,0 +1,142 @@
+openapi: '3.0.2'
+info:
+  title: Hexagon Player API
+  version: '1.0'
+servers:
+  - url: /
+paths:
+  /game/{game-name}:
+    parameters:
+      - name: game-name
+        in: path
+        schema:
+          type: string
+        required: true
+    post:
+      description: Starting a game - whether the API will take part
+      responses:
+        '204':
+          description: I will take part
+        '418':
+          description: API refuses to take part in this game
+    delete:
+      description: Game finished
+      responses:
+        '204':
+          description: OK then
+  /game/{game-name}/move:
+    parameters:
+      - name: game-name
+        in: path
+        schema:
+          type: string
+        required: true
+    post:
+      description: move
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/PlayerView"
+      responses:
+        '200':
+          description: OK then
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/Move"
+  /game/{game-name}/move/{round-no}/feedback:
+    parameters:
+      - name: game-name
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: round-no
+        description: round number
+        in: path
+        schema:
+          type: string
+        required: true
+    put:
+      description: feedback on the move if there was a problem
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                move:
+                  $ref: "#/components/schemas/Move"
+                error:
+                  type: string
+      responses:
+        '204':
+          description: OK then
+
+
+components:
+  schemas:
+    CellId:
+      description: Unique ID of the cell. 
+              Usually Address of the cell according to hexagonal coordinates (but could be a GUID and opaque)
+      type: string
+      example: "-1_3"
+    BasicCellInfo:
+      description: basic information about a cell
+      properties:
+        id:
+          $ref: "#/components/schemas/CellId"
+        resources:
+          description: number of resources it has
+          type: integer
+    NeighbourInfo:
+      description: metadata about a neighbouring cell
+      allOf:
+        - $ref: "#/components/schemas/BasicCellInfo"
+        - type: object
+          properties:
+            isOwned:
+              description: whether the neighbouring cell is owned by the player. Can be False, True or Null (i.e. neutral)
+              nullable: true  
+    CellInfo:
+      description: metadata about a cell
+      allOf:
+        - $ref: "#/components/schemas/BasicCellInfo"
+        - type: object
+          properties:
+            neigbours:
+              description: list of neighbouring cells
+              type: array
+              items:
+                $ref: "#/components/schemas/NeighbourInfo"
+    PlayerView:
+      description: View of the board presented to each player 
+          and the player to return the move accordingly
+      properties:
+        roundNo:
+          description: The round number
+          type: integer
+        ownedCells:
+          description: list of cells owned with their metadata
+          type: array
+          items:
+            $ref: "#/components/schemas/CellInfo"
+    Move:
+      description: A move by a player
+      properties:
+        fromCell:
+          $ref: "#/components/schemas/CellId"
+        toCell:
+          $ref: "#/components/schemas/CellId"
+        resources:
+          description: number of resources to transfer. Must be less than number of fromCell resources
+          type: integer
+
+
+
+              
+        
+
+
+    

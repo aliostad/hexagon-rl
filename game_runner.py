@@ -16,7 +16,7 @@ class GameRunner:
 
   def run(self, name, games=10, rounds=1000):
     for gid in range(0, games):
-      self.game = Game(self.slot.name, str(gid+1), self.players, rounds, 7)
+      self.game = Game(self.slot.name, str(gid+1), self.players, rounds, 12)
       hexagon_ui_api.games['1'] = self.game
       self.game.start()
       for i in range(0, rounds):
