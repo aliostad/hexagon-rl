@@ -70,7 +70,7 @@ class Player:
     self._started = False
     self.current_game = None
 
-  def start(self, gameName=None):
+  def start(self, gameName):
     if self._started:
       raise RuntimeError('Player already started')
     self._started = True
@@ -204,7 +204,7 @@ class Game:
   def start(self):
     if self._started:
       raise RuntimeError('Game already started')
-    self.real_players = filter(lambda player: player.start(), self.players)
+    self.real_players = filter(lambda player: player.start(self.name), self.players)
     if len(self.real_players) > 1:
       self._started = True
       self.board = Board(self.radius)

@@ -32,6 +32,16 @@ class CellId:
     return False
 
   @staticmethod
+  def parse(s):
+    '''
+
+    :type s: str
+    :return:
+    '''
+    parts = s.split('_')
+    return CellId(int(parts[0]), int(parts[1]))
+
+  @staticmethod
   def get_poles(radius):
     """
 
