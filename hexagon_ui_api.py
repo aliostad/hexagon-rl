@@ -7,22 +7,11 @@ import jsonpickle
 import logging
 import json
 
-games = {}
+slots = {}
 slot = None
 t = time.time()
 app = Flask(__name__)
 application = app
-
-class GameSnapshot:
-  def __init__(self, game, slot):
-    """
-
-    :type game: Game
-    """
-    self.boardSnapshot = game.board.get_snapshot()
-    self.stat = GameStat(game.name, game.round_no, game.get_player_stats(), False)
-    self.radius = game.board.radius
-    self.slot = slot
 
 @app.route('/', methods=['GET'])
 def browse_default():
@@ -43,7 +32,7 @@ def get_game_status(slotName):
   :type slot: str
   :return:
   """
-  global games
+  global slots
   global slot
   if slotName in games:
     game = games[slotName]

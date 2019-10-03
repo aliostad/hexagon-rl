@@ -271,3 +271,14 @@ class Game:
     self._started = False
 
 
+class GameSnapshot:
+  def __init__(self, game, slotName):
+    """
+
+    :type game: Game
+    """
+    self.boardSnapshot = game.board.get_snapshot()
+    self.stat = GameStat(game.name, game.round_no, game.get_player_stats(), False)
+    self.radius = game.board.radius
+    self.slot = slotName
+

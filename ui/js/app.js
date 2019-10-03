@@ -3,11 +3,16 @@
 $(function() {
 
 var state = {
-  baseUrl: "/api/game/",
+  baseUrl: "/api/slot/",
   slotName: "1",
   gameRunning: false,
   displayLoaded: false
 };
+
+var qs = new URLSearchParams(location.search);
+var slot = qs.get('slot');
+if (slot)
+    state.slotName = slot;
 
 state.getUrl = function() {
   return state.baseUrl + state.slotName;
