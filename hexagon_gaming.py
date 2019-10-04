@@ -116,7 +116,6 @@ class Slot:
     for p in players:
       self.player_scores[p.name] = 0
 
-
   def add_game_stats(self, gameStat):
     """
 

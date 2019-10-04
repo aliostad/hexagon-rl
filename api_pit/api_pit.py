@@ -8,13 +8,28 @@ import logging
 import json
 
 slots = {}
-slot = None
 t = time.time()
 app = Flask(__name__)
 application = app
 ui_assets_path = '../ui'
 
 DEFAULT_SLOT = '1'
+
+
+class SlotState:
+  def __init__(self, slot):
+    '''
+
+    :type slot: Slot
+    '''
+    self.slot = slot
+    self.th = None
+
+  def start_game(self):
+    pass
+
+  def finish_game(self):
+    pass
 
 @app.route('/', methods=['GET'])
 def browse_default():
@@ -43,6 +58,12 @@ def get_game_status(slotName):
 
   else:
     return jsonify("game not valid"), 404
+
+@app.route('/api/slot/<slotName>', methods=['PUT'])
+def create_game(slotName):
+  j = request.json
+
+  slots[slotName]
 
 def run_app():
   app.run(debug=False, use_reloader=False, host='0.0.0.0', port=19690, threaded=True)
