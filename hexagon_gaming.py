@@ -113,6 +113,7 @@ class Slot:
     self.name = name
     self.games = []
     self.player_scores = {}
+    self.players = players
     for p in players:
       self.player_scores[p.name] = 0
 

@@ -12,10 +12,10 @@ class GameRunner:
     self.game = None
     self.slot = Slot(slotName, players)
 
-  def run_many(self, games=10, rounds=1000):
+  def run_many(self, games=10, rounds=1000, radius=None):
     for gid in range(0, games):
       name = str(gid+1)
-      self.game = Game(self.slot.name, name, self.players, rounds, 12)
+      self.game = Game(self.slot.name, name, self.players, rounds, radius)
       self.game.start()
       for i in range(0, rounds):
         stats, finished, info = self.game.run_sync()

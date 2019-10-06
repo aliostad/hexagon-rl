@@ -1,7 +1,6 @@
 from hexagon_gaming import *
 import requests
 import urlparse
-from . import MoveFeedback
 import jsonpickle
 import json
 
@@ -11,6 +10,12 @@ paths = {
   'move': 'game/{}',
   'move-feedback': 'game/{}/move/{}/feedback',
 }
+
+class MoveFeedback:
+  def __init__(self, move, error):
+    self.move = move
+    self.error = error
+
 
 class ApiPlayer(Player):
   def __init__(self, name, baseUrl):
