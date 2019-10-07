@@ -1,33 +1,19 @@
 from __future__ import unicode_literals
 from flask import Flask, jsonify, request, send_from_directory
-import logging
-from logging import FileHandler
 import time
-import numpy as np
-import os
-import codecs
-import random
-import sys
 import hexagon_agent
-import centaur
 t = time.time()
 app = Flask(__name__)
 application = app
 
-centaurName = 'cc'
 players = {}
-players[centaurName + '_1'] = centaur.Centaur(centaurName, 'ccc-')
 
 
 @app.route("/api/player/<playerId>/game/<gameId>", methods=['POST'])
 def startGame(playerId, gameId):
   global players
   try:
-    key = playerId + "_" + gameId
-    if playerId == centaurName:
-      players[key].reset()
-    else:
-      players[key] = hexagon_agent.Aliostad(playerId)
+    players[key] = hexagon_agent.Aliostad(playerId)
     return '', 200
   except Exception as e:
     return e.message
