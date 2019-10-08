@@ -26,6 +26,12 @@ class PlayerView:
     self.roundNo = roundNo
     self.ownedCells = ownedCells
 
+  def to_json(self):
+    return {
+      'roundNo': self.roundNo,
+      'ownedCells': map(lambda x: x.to_json(), self.ownedCells)
+    }
+
 
 class PlayerStat:
   def __init__(self, playerName, roundNo, cellsOwned, totalResources):

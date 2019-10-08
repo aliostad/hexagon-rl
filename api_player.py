@@ -1,7 +1,9 @@
+'''
+A player stub where the player is in fact a remote API, possible hosted by player_api
+'''
 from hexagon_gaming import *
 import requests
 import urlparse
-import jsonpickle
 import json
 
 paths = {
@@ -31,16 +33,17 @@ class ApiPlayer(Player):
     relativ = paths['move'].format(self.current_game)
     url = urlparse.urljoin(self.url, relativ)
     try:
-      r = requests.put(url, json.loads(jsonpickle.dumps(playerView)))
+      r = requests.put(url, json=json.dumps(playerView.to_json()))
       if r.status_code == 200:
         j = json.loads(r.json())
-        return Move(CellId.parse(j['fromCell']), CellId.parse(j['toCell']), j['resource'])
+        return Move(CellId.parse(j['fromCell']), CellId.parse(j['toCell']), j['resources'])
       else:
         print r.text
         return None
     except Exception as e:
       print e
       return None
+
   def start(self, gameName):
     '''
 
@@ -51,8 +54,9 @@ class ApiPlayer(Player):
     url = urlparse.urljoin(self.url, relativ)
     try:
       r = requests.post(url)
-      if r.status_code == 204:
+      if r.status_code in [200, 204]:
         self.current_game = gameName
+        self._started = True
         return True
       else:
         return False
@@ -77,7 +81,7 @@ class ApiPlayer(Player):
     url = urlparse.urljoin(self.url, relativ)
     mf = MoveFeedback(move, error)
     try:
-      r = requests.put(url, json.loads(jsonpickle.dumps(mf)))
+      r = requests.post(url, json=jsonpickle.dumps(mf))
     except Exception as e:
       # not important frankly
       print e

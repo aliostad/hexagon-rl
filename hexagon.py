@@ -1,4 +1,5 @@
 from copy import deepcopy
+import json
 class CellId:
   _poleCache = {}
 
@@ -17,7 +18,7 @@ class CellId:
   def __str__(self):
     return self._str
 
-  def toJson(self):
+  def to_json(self):
     return self.__str__()
 
   def __hash__(self):
@@ -39,6 +40,7 @@ class CellId:
     :return:
     '''
     parts = s.split('_')
+    assert len(parts) == 2
     return CellId(int(parts[0]), int(parts[1]))
 
   @staticmethod
@@ -89,6 +91,13 @@ class CellInfo:
     self.resources = resources
     self.neighbours = neighbours
 
+  def to_json(self):
+    return {
+      'id': self.id.to_json(),
+      'resources': self.resources,
+      'neighbours' : map(lambda x: x.to_json(), self.neighbours)
+    }
+
 
 class NeighbourInfo:
   def __init__(self, id, resources, isOwned):
@@ -101,6 +110,13 @@ class NeighbourInfo:
     self.id = id
     self.resources = resources
     self.isOwned = isOwned
+
+  def to_json(self):
+    return {
+      'id': self.id.to_json(),
+      'resources': self.resources,
+      'isOwned': self.isOwned
+    }
 
 
 class Cell:

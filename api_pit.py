@@ -1,10 +1,8 @@
 from __future__ import unicode_literals
 from flask import Flask, jsonify, request, send_from_directory
 import time
-import threading
 from hexagon_gaming import *
 import jsonpickle
-import logging
 import json
 import threading
 import game_runner
@@ -16,7 +14,7 @@ slots = {}
 t = time.time()
 app = Flask(__name__)
 application = app
-ui_assets_path = '../ui'
+ui_assets_path = 'ui'
 
 DEFAULT_SLOT = '1'
 
