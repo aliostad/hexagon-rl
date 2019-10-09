@@ -25,7 +25,7 @@ class SlotRunner:
     self.th = None
 
   def run(self, n_games=20, n_rounds=1000, radius=None):
-    gr = game_runner.GameRunner(self.slot.players, self.slot.name)
+    gr = game_runner.GameRunner(self.slot)
 
     def run_it():
       self.running = True

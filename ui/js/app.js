@@ -6,7 +6,8 @@ var state = {
   baseUrl: "/api/slot/",
   slotName: "1",
   gameRunning: false,
-  displayLoaded: false
+  displayLoaded: false,
+  updateInterval: 500
 };
 
 var qs = new URLSearchParams(location.search);
@@ -204,6 +205,9 @@ function updateDisplayBoard(snapshot) {
 
   playerStats = snapshot.stat.playerStats;
 
+  d3.select("#slotName")
+    .text(state.slotName);
+
   d3.select("#gameName")
     .text(snapshot.stat.name);
 
@@ -244,7 +248,6 @@ function updateDisplayBoard(snapshot) {
 }
 
 function setTimer() {
-  var timer = 200;
 
   $.ajax(state.getUrl() , {
       dataType: "json",
@@ -256,11 +259,11 @@ function setTimer() {
         updateDisplayBoard(data);
 
         if (!data.stat.finished)
-          setTimeout(setTimer, timer);
+          setTimeout(setTimer, state.updateInterval);
       },
       error: function(xqh, status, e) {
         console.log(e);
-        setTimeout(setTimer, timer);
+        setTimeout(setTimer, state.updateInterval);
       }
      });
 }
