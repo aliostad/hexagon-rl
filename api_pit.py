@@ -79,10 +79,18 @@ def create_game(slotName):
   if slotName in slots:
     s = slots[slotName]
     s.stop()
-
+  n_games = 20
+  n_rounds = 1000
+  board_radius = None
+  if request.args.get('n_games'):
+    n_games = int(request.args.get('n_games'))
+  if request.args.get('n_rounds'):
+    n_rounds = int(request.args.get('n_rounds'))
+  if request.args.get('radius'):
+    board_radius = int(request.args.get('radius'))
   s = Slot(slotName, build_players(j))
   ss = slots[slotName] = SlotRunner(s)
-  ss.run()
+  ss.run(n_games, n_rounds, board_radius)
   return jsonify(True)
 
 def build_players(j):

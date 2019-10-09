@@ -14,8 +14,7 @@ paths = {
 }
 
 class MoveFeedback:
-  def __init__(self, move, error):
-    self.move = move
+  def __init__(self, error):
     self.error = error
 
 
@@ -79,9 +78,9 @@ class ApiPlayer(Player):
   def move_feedback(self, roundNo, move, error):
     relativ = paths['move-feedback'].format(self.current_game, roundNo)
     url = urlparse.urljoin(self.url, relativ)
-    mf = MoveFeedback(move, error)
+    mf = MoveFeedback(error)
     try:
-      r = requests.post(url, json=jsonpickle.dumps(mf))
+      r = requests.post(url, json=json.dumps(mf.__dict__))
     except Exception as e:
       # not important frankly
       print e

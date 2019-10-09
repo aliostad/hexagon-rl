@@ -248,6 +248,7 @@ class Game:
       clashes[mv.fromCell].append(p.name)
       success, errormsg = self.board.try_transfer(mv)
       if not success and self.verbose:
+        p.move_feedback(self.round_no, mv, errormsg)
         print('Move {} from player {} illegal: {}'.format(self.round_no, p.name, errormsg))
     for c in clashes:
       if len(clashes[c]) > 1 and self.verbose:

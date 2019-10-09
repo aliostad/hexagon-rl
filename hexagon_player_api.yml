@@ -12,6 +12,12 @@ paths:
         schema:
           type: string
         required: true
+      - name: slot
+        description: Name of the slot
+        in: query
+        schema:
+          type: string
+        required: false
     post:
       description: Starting a game - whether the API will take part
       responses:
@@ -31,7 +37,7 @@ paths:
         schema:
           type: string
         required: true
-    post:
+    put:
       description: move
       requestBody:
         content:
@@ -58,7 +64,7 @@ paths:
         schema:
           type: string
         required: true
-    put:
+    post:
       description: feedback on the move if there was a problem
       requestBody:
         content:
@@ -66,8 +72,6 @@ paths:
             schema:
               type: object
               properties:
-                move:
-                  $ref: "#/components/schemas/Move"
                 error:
                   type: string
       responses:

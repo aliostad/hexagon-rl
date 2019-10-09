@@ -57,6 +57,14 @@ def endGame(playerId, gameId):
   del players[key]
   return "player not found in this game", 404
 
+
+@app.route("/api/player/<playerId>/game/<gameId>/move/<roundNo>/feedback", methods=['POST'])
+def move_feedback(playerId, gameId, roundNo):
+  j = json.loads(request.json)
+  print('Error for player {} round number {}: {}'.format(playerId, roundNo, j['error']))
+  return '', 204
+
+
 def create_player_view_from_j(j):
   rounNo = j['roundNo']
   ownedCells = []
