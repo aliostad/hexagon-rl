@@ -35,7 +35,12 @@ def move(playerId, gameId):
   playerview = create_player_view_from_j(j)
   mv = players[key].move(playerview)
   if mv is None:
-    print('idiot')
+    # it probably has a single cell and cannot move... send an invalid move
+    return jsonify(json.dumps({
+      'toCell': str(CellId(0, 0)),
+      'resources': 0,
+      'fromCell': str(CellId(0, 0))
+    }))
 
   return jsonify(json.dumps({
     'toCell': str(mv.toCell),

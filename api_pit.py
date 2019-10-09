@@ -16,17 +16,15 @@ app = Flask(__name__)
 application = app
 ui_assets_path = 'ui'
 
-DEFAULT_SLOT = '1'
 
-
-class SlotState:
+class SlotRunner:
   def __init__(self, slot):
     self.slot = slot
     self.runner = None
     self.running = False
     self.th = None
 
-  def start_game(self, n_games=20, n_rounds=1000, radius=None):
+  def run(self, n_games=20, n_rounds=1000, radius=None):
     gr = game_runner.GameRunner(self.slot.players, self.slot.name)
 
     def run_it():
@@ -41,7 +39,7 @@ class SlotState:
     th.start()
     self.runner = gr
 
-  def finish_game(self):
+  def stop(self):
     if self.th is not None:
       self.th.join(0)
       self.th = None
@@ -80,11 +78,11 @@ def create_game(slotName):
 
   if slotName in slots:
     s = slots[slotName]
-    s.finish_game()
+    s.stop()
 
   s = Slot(slotName, build_players(j))
-  ss = slots[slotName] = SlotState(s)
-  ss.start_game()
+  ss = slots[slotName] = SlotRunner(s)
+  ss.run()
   return jsonify(True)
 
 def build_players(j):
