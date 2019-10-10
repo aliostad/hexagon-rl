@@ -77,8 +77,6 @@ paths:
       responses:
         '204':
           description: OK then
-
-
 components:
   schemas:
     CellId:

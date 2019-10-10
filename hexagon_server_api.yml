@@ -5,6 +5,19 @@ info:
 servers:
   - url: /
 paths:
+  /:
+    parameters:
+      - name: slot
+        description: name of the slot 
+        in: query
+        schema:
+          type: string
+        required: false
+    get:
+      description: Provides the UI for the slot
+      responses:
+        '200':
+          description: returns the UI
   /api/slot/{slot-name}:
     parameters:
       - name: slot-name
@@ -56,10 +69,10 @@ paths:
           content:
             'application/json':
               schema:
-                $ref: "#/components/schemas/NotYetDefined"
+                type: object
+                description: not defined
         '404':
           description: could not find the game
-
 components:
   schemas:
     Player:
