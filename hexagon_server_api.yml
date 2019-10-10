@@ -1,0 +1,82 @@
+openapi: '3.0.2'
+info:
+  title: Hexagon Server API
+  version: '1.0'
+servers:
+  - url: /
+paths:
+  /api/slot/{slot-name}:
+    parameters:
+      - name: slot-name
+        description: name of the slot where players will be playing
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: n_games
+        description: number of games
+        in: query
+        schema:
+          type: integer
+        required: false
+      - name: n_rounds
+        description: number of rounds per games
+        in: query
+        schema: 
+          type: integer
+        required: false
+      - name: radius
+        in: query
+        description: radius of the board
+        schema:
+          type: integer
+        required: false
+    post:
+      description: Starting a game series in the slot
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/CreateSlotRequest"          
+      responses:
+        '201':
+          description: successfully created
+    delete:
+      description: Game finished
+      responses:
+        '204':
+          description: OK then
+        '404':
+          description: could not find the game
+    get:
+      description: Gets status of the current game of the slot
+      responses:
+        '200':
+          description: returning the status of teh current game
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/NotYetDefined"
+        '404':
+          description: could not find the game
+
+components:
+  schemas:
+    Player:
+      type: object
+      properties:
+        name:
+          type: string
+          description: name of the player
+        url:
+          type: string
+          description: URL of the player API. If does not exist, |
+                        system will create a server implementation of a player
+          nullable: true
+    CreateSlotRequest:
+      properties:
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+          

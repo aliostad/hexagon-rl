@@ -17,19 +17,27 @@ application = app
 ui_assets_path = 'ui'
 
 
+class Signaller:
+  def __init__(self):
+    self.signalled = False
+
+  def signal(self):
+    self.signalled = True
+
 class SlotRunner:
   def __init__(self, slot):
     self.slot = slot
     self.runner = None
     self.running = False
     self.th = None
+    self.sig = Signaller()
 
   def run(self, n_games=20, n_rounds=1000, radius=None):
     gr = game_runner.GameRunner(self.slot)
 
     def run_it():
       self.running = True
-      gr.run_many(n_games, n_rounds, radius)
+      gr.run_many(n_games, n_rounds, radius, self.sig)
       self.running = False
       self.th = None
 
@@ -41,7 +49,8 @@ class SlotRunner:
 
   def stop(self):
     if self.th is not None:
-      self.th.join(0)
+      self.sig.signal()
+      self.th.join(0.5)
       self.th = None
 
 @app.route('/', methods=['GET'])
@@ -72,13 +81,19 @@ def get_game_status(slotName):
   else:
     return jsonify("game not valid"), 404
 
-@app.route('/api/slot/<slotName>', methods=['POST'])
-def create_game(slotName):
-  j = request.json
-
+@app.route('/api/slot/<slotName>', methods=['DELETE'])
+def stop_game(slotName):
   if slotName in slots:
     s = slots[slotName]
     s.stop()
+    return jsonify(True), 204
+  else:
+    return jsonify("game not valid"), 404
+
+@app.route('/api/slot/<slotName>', methods=['POST'])
+def create_game(slotName):
+  j = request.json
+  stop_game(slotName)
   n_games = 20
   n_rounds = 1000
   board_radius = None
@@ -91,7 +106,7 @@ def create_game(slotName):
   s = Slot(slotName, build_players(j))
   ss = slots[slotName] = SlotRunner(s)
   ss.run(n_games, n_rounds, board_radius)
-  return jsonify(True)
+  return jsonify(True), 201
 
 def build_players(j):
   players = []
