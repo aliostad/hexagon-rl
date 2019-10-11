@@ -90,7 +90,7 @@ def stop_game(slotName):
   else:
     return jsonify("game not valid"), 404
 
-@app.route('/api/slot/<slotName>', methods=['POST'])
+@app.route('/api/slot/<slotName>', methods=['PUT'])
 def create_game(slotName):
   j = request.json
   stop_game(slotName)

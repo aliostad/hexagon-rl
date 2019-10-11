@@ -44,7 +44,7 @@ paths:
         schema:
           type: integer
         required: false
-    post:
+    put:
       description: Starting a game series in the slot
       requestBody:
         content:
