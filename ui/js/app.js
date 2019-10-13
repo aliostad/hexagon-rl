@@ -240,7 +240,7 @@ function updateDisplayBoard(snapshot) {
     var id = "#standing_" + i;
     d3.select(id)
       .text(
-      `[${snapshot.slot.player_scores[stat.playerName]}] ${stat.playerName} - ${stat.cellsOwned} (${stat.totalResource ? stat.totalResource : stat.totalResources})`)
+      `[${snapshot.playerScores[stat.playerName]}] ${stat.playerName} - ${stat.cellsOwned} (${stat.totalResource ? stat.totalResource : stat.totalResources})`)
       .style("background-color",
                getColour(stat.playerName));
 
@@ -278,14 +278,11 @@ setTimer();
 function createGame() {
 
   $.ajax(state.getUrl(), {
-    //dataType: "json",
     type: "POST",
     success: function(){
 
       state.gameRunning = true;
       state.displayLoaded = false;
-      //d3.select("#chart").remove();
-      //d3.select("#display").remove();
 
       $.ajax(state.getUrl(), {
           dataType: "json",

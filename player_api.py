@@ -4,21 +4,19 @@ A REST API representing a player (or a number of)
 from __future__ import unicode_literals
 from flask import Flask, jsonify, request, send_from_directory
 import time
-import os
+import port_selection
 import hexagon_agent
 from hexagon_gaming import *
 
 t = time.time()
 app = Flask(__name__)
 application = app
-port = 16611
-if os.environ['hexagon_player_api_port']:
-  port = int(os.environ['hexagon_player_api_port'])
+port = port_selection.Select_port(16611, 'hexagon_player_api_port', 'port', 'PORT')
 
 players = {}
 
 
-@app.route("/api/player/<playerId>/game/<gameId>", methoss=['POST'])
+@app.route("/api/player/<playerId>/game/<gameId>", methods=['POST'])
 def startGame(playerId, gameId):
   global players
   try:

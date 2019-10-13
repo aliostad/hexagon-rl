@@ -24,4 +24,5 @@ COPY player_api.py .
 COPY api_player.py .
 COPY hexagon_gaming.py .
 COPY hexagon.py .
+COPY port_selection.py .
 COPY ui ./ui

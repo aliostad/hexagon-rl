@@ -279,7 +279,7 @@ class Game:
 
 
 class GameSnapshot:
-  def __init__(self, game, slotName):
+  def __init__(self, game, slotName, playerScores):
     """
 
     :type game: Game
@@ -287,5 +287,6 @@ class GameSnapshot:
     self.boardSnapshot = game.board.get_snapshot()
     self.stat = GameStat(game.name, game.round_no, game.get_player_stats(), False)
     self.radius = game.board.radius
-    self.slot = slotName
+    self.slotName = slotName
+    self.playerScores = playerScores
 

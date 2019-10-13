@@ -8,16 +8,15 @@ import threading
 import game_runner
 import api_player
 import hexagon_agent
-import os
+import port_selection
 
 slots = {}
 t = time.time()
 app = Flask(__name__)
 application = app
 ui_assets_path = 'ui'
-port = 19690
-if os.environ['hexagon_server_api_port']:
-  port = int(os.environ['hexagon_server_api_port'])
+port = port = port_selection.Select_port(19690, 'hexagon_server_api_port', 'port', 'PORT')
+
 
 class Signaller:
   def __init__(self):
@@ -78,7 +77,7 @@ def get_game_status(slotName):
   if slotName in slots and slots[slotName].runner is not None:
     ss = slots[slotName]
     game = ss.runner.game
-    snapshot = GameSnapshot(game, ss.slot)
+    snapshot = GameSnapshot(game, ss.slot.name, ss.slot.player_scores)
     return jsonify(json.loads(jsonpickle.dumps(snapshot)))
   else:
     return jsonify("game not valid"), 404
