@@ -1,4 +1,5 @@
 FROM aliostad/hexagon-base
 
-ENTRYPOINT [ "python", "wsgi.py" ]
+EXPOSE 16611
 
+ENTRYPOINT [ "python", "player_api.py" ]

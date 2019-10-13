@@ -8,14 +8,16 @@ import threading
 import game_runner
 import api_player
 import hexagon_agent
-
+import os
 
 slots = {}
 t = time.time()
 app = Flask(__name__)
 application = app
 ui_assets_path = 'ui'
-
+port = 19690
+if os.environ['hexagon_server_api_port']:
+  port = int(os.environ['hexagon_server_api_port'])
 
 class Signaller:
   def __init__(self):
@@ -119,7 +121,8 @@ def build_players(j):
   return players
 
 def run_app():
-  app.run(debug=False, use_reloader=False, host='0.0.0.0', port=19690, threaded=True)
+
+  app.run(debug=False, use_reloader=False, host='0.0.0.0', port=port, threaded=True)
 
 if __name__ == '__main__':
   run_app()

@@ -4,18 +4,21 @@ A REST API representing a player (or a number of)
 from __future__ import unicode_literals
 from flask import Flask, jsonify, request, send_from_directory
 import time
+import os
 import hexagon_agent
-import json
 from hexagon_gaming import *
 
 t = time.time()
 app = Flask(__name__)
 application = app
+port = 16611
+if os.environ['hexagon_player_api_port']:
+  port = int(os.environ['hexagon_player_api_port'])
 
 players = {}
 
 
-@app.route("/api/player/<playerId>/game/<gameId>", methods=['POST'])
+@app.route("/api/player/<playerId>/game/<gameId>", methoss=['POST'])
 def startGame(playerId, gameId):
   global players
   try:
@@ -75,3 +78,7 @@ def create_player_view_from_j(j):
       ci.neighbours.append(ni)
     ownedCells.append(ci)
   return PlayerView(rounNo, ownedCells)
+
+
+if __name__ == "__main__":
+    application.run(host='0.0.0.0', port=port)

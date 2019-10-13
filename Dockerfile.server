@@ -1,3 +1,5 @@
 FROM aliostad/hexagon-base
 
+EXPOSE 19690
+
 ENTRYPOINT [ "python", "api_pit.py" ]
