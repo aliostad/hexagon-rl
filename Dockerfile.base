@@ -1,0 +1,28 @@
+FROM ubuntu-upstart
+
+LABEL maintainer="aliostad"
+
+RUN apt-get update
+
+RUN sudo apt-get install -y \
+    python-dev \
+	python-pip
+
+RUN sudo pip install \
+    MarkupSafe \
+	flask \
+	requests \
+	jsonpickle \
+    numpy==1.14.0
+
+WORKDIR /app
+
+COPY api_pit.py .
+COPY game_runner.py .
+COPY hexagon_agent.py .
+COPY player_api.py .
+COPY api_player.py .
+COPY hexagon_gaming.py .
+COPY hexagon.py .
+COPY wsgi.py .
+COPY ui ./ui

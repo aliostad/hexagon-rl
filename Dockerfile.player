@@ -1,0 +1,4 @@
+FROM aliostad/hexagon-base
+
+ENTRYPOINT [ "python", "wsgi.py" ]
+
