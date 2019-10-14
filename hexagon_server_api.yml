@@ -86,6 +86,11 @@ components:
           description: URL of the player API. If does not exist, |
                         system will create a server implementation of a player
           nullable: true
+        params:
+          description: A key-value dictionary to provide parameters to your agent
+          type: object
+          additionalProperties:
+            type: string
     CreateSlotRequest:
       properties:
         players:
