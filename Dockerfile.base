@@ -11,7 +11,7 @@ RUN sudo apt-get install -y \
 RUN sudo pip install \
     MarkupSafe \
 	flask \
-	requests \
+	requests==2.22.0 \
 	jsonpickle \
     numpy==1.14.0
 
