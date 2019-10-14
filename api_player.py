@@ -19,9 +19,10 @@ class MoveFeedback:
 
 
 class ApiPlayer(Player):
-  def __init__(self, name, baseUrl):
+  def __init__(self, name, baseUrl, params):
     Player.__init__(self, name)
     self.url = baseUrl
+    self.params = params
 
   def move(self, playerView):
     '''
@@ -52,7 +53,7 @@ class ApiPlayer(Player):
     relativ =  paths['join-game'].format(gameName)
     url = urlparse.urljoin(self.url, relativ)
     try:
-      r = requests.post(url)
+      r = requests.post(url, json=json.dumps(self.params))
       if r.status_code in [200, 204]:
         self.current_game = gameName
         self._started = True

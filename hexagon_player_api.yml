@@ -20,6 +20,14 @@ paths:
         required: false
     post:
       description: Starting a game - whether the API will take part
+      requestBody:
+        content:
+          'application/json':            
+            schema:
+              description: an optional key value dictionary with parameters
+              type: object
+              additionalProperties: 
+                type: string
       responses:
         '204':
           description: I will take part

@@ -167,7 +167,7 @@ class Aliostad(Player):
                randomBoostFactor=None,
                randomVariation=False,
                moveHandicap=None,
-               logging=False):
+               logging=False, **kwargs):
     Player.__init__(self, name)
     self.round_no = 0
     self.history = []

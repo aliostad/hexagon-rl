@@ -114,9 +114,9 @@ def build_players(j):
   for p in j['players']:
     name = p['name']
     if 'url' in p:
-      players.append(api_player.ApiPlayer(name, p['url']))
+      players.append(api_player.ApiPlayer(name, p['url'], p['params'] if 'params' in p else {}))
     else:
-      players.append(hexagon_agent.Aliostad(name))
+      players.append(hexagon_agent.Aliostad(name, **p['params'] if 'params' in p else {}))
   return players
 
 def run_app():
