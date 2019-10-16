@@ -7,6 +7,7 @@ import time
 import port_selection
 import hexagon_agent
 from hexagon_gaming import *
+import json
 
 t = time.time()
 app = Flask(__name__)
@@ -20,7 +21,10 @@ players = {}
 def startGame(playerId, gameId):
   global players
   try:
-    players[playerId] = hexagon_agent.Aliostad(playerId)
+    params = {}
+    if request.json is not None and len(request.json) > 1:
+      params = json.loads(request.json)
+    players[playerId] = hexagon_agent.Aliostad(playerId, **params)
     return '', 204
   except Exception as e:
     return e.message
