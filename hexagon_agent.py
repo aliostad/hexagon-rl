@@ -392,7 +392,10 @@ class Aliostad(Player):
                                                                    move.toCell,
                                                                    move.resources,
                                                                    world.cells[move.fromCell]))
-    return move
+    if self.move_handicap is None:
+      return move
+    else:
+      return move if random.uniform(0., 1.0) > self.move_handicap else Move(CellId(0, 0), CellId(0, 0), 0)
 
   def finish(self):
     Player.finish(self)

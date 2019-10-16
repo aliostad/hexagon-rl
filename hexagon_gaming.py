@@ -1,7 +1,7 @@
 import math
 from hexagon import *
 import numpy as np
-
+import random
 
 class Move:
   def __init__(self, fromCell, toCell, resources):
@@ -212,6 +212,7 @@ class Game:
       raise RuntimeError('Game already started')
     self.real_players = filter(lambda player: player.start(self.name), self.players)
     if len(self.real_players) > 1:
+      random.shuffle(self.real_players)
       self._started = True
       self.board = Board(self.radius)
       self._put_players_on_seeds()
